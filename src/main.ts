@@ -8,3 +8,4 @@ async function bootstrap() {
   console.log(`\n🚀 Application is running on: http://localhost:${port}\n`);
 }
 bootstrap();
+// Trigger restart
