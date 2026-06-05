@@ -13,7 +13,7 @@ import { RolesGuard } from './roles.guard';
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'schedula_secret_key',
       signOptions: {
-        expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+        expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as any,
       },
     }),
   ],
