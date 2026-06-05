@@ -1,5 +1,6 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { SignupDto } from './signup.dto';
+import { LoginDto } from './login.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from './role.enum';
 
@@ -46,6 +47,30 @@ export class AuthService {
 
     return {
       message: 'User registered successfully',
+      user: userWithoutPassword,
+    };
+  }
+
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    // Check if user exists
+    const user = this.users.find((u) => u.email === email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Validate password against bcrypt hash
+    const isPasswordValid = await bcrypt.compare(password, user.password!);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Return success response without password
+    const { password: _, ...userWithoutPassword } = user;
+
+    return {
+      message: 'Login successful',
       user: userWithoutPassword,
     };
   }
