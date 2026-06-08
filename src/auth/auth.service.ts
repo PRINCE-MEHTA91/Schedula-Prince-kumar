@@ -4,56 +4,49 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { SignupDto } from './signup.dto';
 import { LoginDto } from './login.dto';
-import { Role } from './role.enum';
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  password?: string;
-  role: Role;
-}
+import { User } from './user.entity';
 
 @Injectable()
 export class AuthService {
-  // In-memory array as temporary database storage
-  private users: User[] = [];
-
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+  ) {}
 
   async signup(signupDto: SignupDto) {
     const { name, email, password, role } = signupDto;
 
-    // Check if email already exists
-    const existingUser = this.users.find((user) => user.email === email);
+    // Check if email already exists in DB
+    const existingUser = await this.userRepo.findOne({ where: { email } });
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
 
-    // Hash the password using bcrypt
+    // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Create user object
-    const newUser: User = {
-      id: this.users.length + 1,
+    // Create and persist user to DB
+    const newUser = this.userRepo.create({
       name,
       email,
       password: hashedPassword,
       role,
-    };
+    });
 
-    // Save to temporary database
-    this.users.push(newUser);
+    const savedUser = await this.userRepo.save(newUser);
 
     // Generate JWT token
-    const token = this.generateToken(newUser);
+    const token = this.generateToken(savedUser);
 
-    // Return success response without password
-    const { password: _, ...userWithoutPassword } = newUser;
+    // Return response without password
+    const { password: _, ...userWithoutPassword } = savedUser;
 
     return {
       message: 'User registered successfully',
@@ -65,14 +58,14 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    // Find user by email
-    const user = this.users.find((u) => u.email === email);
+    // Find user by email from DB
+    const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password!);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
