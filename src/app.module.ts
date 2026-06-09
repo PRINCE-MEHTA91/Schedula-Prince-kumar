@@ -14,6 +14,10 @@ import { PatientModule } from './patient/patient.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
 
+/**
+ * Root application module.
+ * Registers all feature modules: Auth, Doctor, Patient.
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),

@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -16,7 +17,12 @@ async function bootstrap() {
   );
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  console.log(`\n🚀 Application is running on: http://localhost:${port}\n`);
+  console.log(`\n🚀 Schedula API is running on: http://localhost:${port}`);
+  console.log(`📋 Available endpoints:`);
+  console.log(`   POST http://localhost:${port}/auth/signup`);
+  console.log(`   POST http://localhost:${port}/auth/login`);
+  console.log(`   GET  http://localhost:${port}/doctor/profile  [DOCTOR only]`);
+  console.log(`   GET  http://localhost:${port}/patient/profile [PATIENT only]\n`);
 }
 bootstrap();
-// Trigger restart
+
