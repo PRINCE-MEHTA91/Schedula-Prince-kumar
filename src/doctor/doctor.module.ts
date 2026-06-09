@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DoctorProfile } from './entities/doctor-profile.entity';
+import { DoctorService } from './doctor.service';
 import { DoctorController } from './doctor.controller';
-import { AuthModule } from '../auth/auth.module';
 
-/**
- * DoctorModule — groups all doctor-related functionality.
- * Imports AuthModule to gain access to JwtAuthGuard, RolesGuard, and PassportModule.
- */
 @Module({
-  imports: [AuthModule],
+  imports: [TypeOrmModule.forFeature([DoctorProfile])],
   controllers: [DoctorController],
-  providers: [],
+  providers: [DoctorService],
 })
 export class DoctorModule {}

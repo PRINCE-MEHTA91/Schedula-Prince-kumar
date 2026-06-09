@@ -1,49 +1,60 @@
-import {
-  Controller,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupDto } from './signup.dto';
 import { LoginDto } from './login.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
+import { Roles } from './roles.decorator';
+import { Role } from './role.enum';
+import { Public } from './public.decorator';
 
-/**
- * AuthController — handles all /auth routes.
- *
- * POST /auth/signup  →  Register a new user (DOCTOR or PATIENT)
- * POST /auth/login   →  Authenticate and receive a JWT token
- */
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /**
-   * Signup endpoint.
-   * Validates the request body via SignupDto (class-validator).
-   * Returns 201 Created with user details on success.
-   * Returns 409 Conflict if the email is already registered.
-   * Returns 400 Bad Request if validation fails.
-   */
+  // POST /auth/signup — public route (no token required)
+  @Public()
   @Post('signup')
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async signup(@Body() signupDto: SignupDto) {
     return this.authService.signup(signupDto);
   }
 
-  /**
-   * Login endpoint.
-   * Validates the request body via LoginDto (class-validator).
-   * Returns 200 OK with a JWT access_token and user details on success.
-   * Returns 401 Unauthorized if credentials are invalid.
-   */
+  // POST /auth/login — public route (no token required)
+  @Public()
   @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  // GET /auth/profile  — protected route (any authenticated user)
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  getProfile(@Request() req: any) {
+    return {
+      message: 'Profile fetched successfully',
+      user: req.user,
+    };
+  }
+
+  // GET /auth/doctor-only  — protected route (DOCTOR role only)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.DOCTOR)
+  @Get('doctor-only')
+  doctorOnly(@Request() req: any) {
+    return {
+      message: 'Welcome Doctor!',
+      user: req.user,
+    };
+  }
+
+  // GET /auth/patient-only  — protected route (PATIENT role only)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PATIENT)
+  @Get('patient-only')
+  patientOnly(@Request() req: any) {
+    return {
+      message: 'Welcome Patient!',
+      user: req.user,
+    };
   }
 }

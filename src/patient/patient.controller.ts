@@ -1,40 +1,46 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Request,
+} from '@nestjs/common';
+import { PatientService } from './patient.service';
+import { CreatePatientProfileDto } from './dto/create-patient-profile.dto';
+import { UpdatePatientProfileDto } from './dto/update-patient-profile.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
-import { Request } from 'express';
 
-/**
- * PatientController — handles all /patient routes.
- * All routes are protected: they require a valid JWT AND the PATIENT role.
- */
 @Controller('patient')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.PATIENT) // All routes in this controller require PATIENT role
 export class PatientController {
-  /**
-   * GET /patient/profile
-   *
-   * Access:
-   *  ✅ PATIENT → 200 OK with profile data
-   *  ❌ DOCTOR  → 403 Forbidden
-   *  ❌ No token → 401 Unauthorized
-   */
+  constructor(private readonly patientService: PatientService) {}
+
+  // POST /patient/profile — Create patient profile (Patient only)
+  @Post('profile')
+  async createProfile(
+    @Request() req: any,
+    @Body() createPatientProfileDto: CreatePatientProfileDto,
+  ) {
+    const userId: number = req.user.id;
+    return this.patientService.createProfile(userId, createPatientProfileDto);
+  }
+
+  // GET /patient/profile — Get patient profile (Patient only)
   @Get('profile')
-  @Roles(Role.PATIENT)
-  getProfile(@Req() req: Request & { user: any }) {
-    return {
-      message: 'Welcome, Patient! You have successfully accessed the Patient profile.',
-      profile: {
-        userId: req.user.userId,
-        email: req.user.email,
-        role: req.user.role,
-        upcomingAppointments: [
-          { date: '2026-06-10', time: '10:00 AM', doctor: 'Dr. Smith' },
-          { date: '2026-06-15', time: '02:00 PM', doctor: 'Dr. Jane' },
-        ],
-        medicalHistory: 'No significant history recorded.',
-      },
-    };
+  async getProfile(@Request() req: any) {
+    const userId: number = req.user.id;
+    return this.patientService.getProfile(userId);
+  }
+
+  // PATCH /patient/profile — Update patient profile (Patient only)
+  @Patch('profile')
+  async updateProfile(
+    @Request() req: any,
+    @Body() updatePatientProfileDto: UpdatePatientProfileDto,
+  ) {
+    const userId: number = req.user.id;
+    return this.patientService.updateProfile(userId, updatePatientProfileDto);
   }
 }

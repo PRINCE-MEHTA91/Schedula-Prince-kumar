@@ -1,20 +1,20 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Global ValidationPipe — validates all incoming request bodies
-  // against their DTOs automatically across every route
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,          // Strip unknown properties from body
-      forbidNonWhitelisted: true, // Throw error if unknown properties are sent
-      transform: true,          // Auto-transform payloads to DTO class instances
+      whitelist: true,            // DTO mein jo fields nahi hain woh strip ho jaayengi
+      forbidNonWhitelisted: true, // Unknown params aaye toh 400 error do
+      transform: true,            // Query strings ko numbers/booleans mein auto-convert karo
+      transformOptions: {
+        enableImplicitConversion: true, // e.g. "1" → 1, "true" → true
+      },
     }),
   );
-
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
   console.log(`\n🚀 Schedula API is running on: http://localhost:${port}`);
