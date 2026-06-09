@@ -6,18 +6,21 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
 import { Role } from './role.enum';
+import { Public } from './public.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // POST /auth/signup
+  // POST /auth/signup — public route (no token required)
+  @Public()
   @Post('signup')
   async signup(@Body() signupDto: SignupDto) {
     return this.authService.signup(signupDto);
   }
 
-  // POST /auth/login
+  // POST /auth/login — public route (no token required)
+  @Public()
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);

@@ -11,7 +11,7 @@ import { User } from './user.entity';
 
 @Module({
   imports: [
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'schedula_secret_key',
       signOptions: {

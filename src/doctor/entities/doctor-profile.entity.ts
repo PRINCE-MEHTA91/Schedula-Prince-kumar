@@ -35,6 +35,10 @@ export class DoctorProfile {
   @Column({ type: 'text', nullable: true })
   profileDetails: string;
 
+  // Doctor abhi appointments le raha hai ya nahi — default: true (available)
+  @Column({ default: true })
+  isAvailable: boolean;
+
   @OneToOne(() => User, { eager: false })
   @JoinColumn({ name: 'userId' })
   user: User;
