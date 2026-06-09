@@ -79,9 +79,9 @@ describe('DoctorService — Discovery APIs', () => {
     jest.clearAllMocks();
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
+
   // 1. BASIC LISTING — bina kisi filter ke doctors ki list
-  // ───────────────────────────────────────────────────────────────────────────
+
   describe('findAll — basic doctor listing', () => {
     it('should return doctors list with pagination info', async () => {
       const fakeDoctors = [
