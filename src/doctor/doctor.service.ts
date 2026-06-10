@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
@@ -17,80 +18,289 @@ export class DoctorService {
     private readonly doctorProfileRepo: Repository<DoctorProfile>,
   ) {}
 
-  // GET /doctor — filtered + paginated doctors ki list
+  // ─── Doctor Self-Management (DOCTOR role) ────────────────────────────────────
+
+  async createProfile(userId: number, dto: CreateDoctorProfileDto) {
+    const existing = await this.doctorProfileRepo.findOne({
+      where: { userId },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'Doctor profile already exists. Use PATCH to update.',
+      );
+    }
+
+    const profile = this.doctorProfileRepo.create({ ...dto, userId });
+    const saved = await this.doctorProfileRepo.save(profile);
+
+    return {
+      message: 'Doctor profile created successfully',
+      profile: saved,
+    };
+  }
+
+  async getProfile(userId: number) {
+    const profile = await this.doctorProfileRepo.findOne({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(
+        'Doctor profile not found. Please complete onboarding first.',
+      );
+    }
+
+    return {
+      message: 'Doctor profile fetched successfully',
+      profile,
+    };
+  }
+
+  async updateProfile(userId: number, dto: UpdateDoctorProfileDto) {
+    const profile = await this.doctorProfileRepo.findOne({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(
+        'Doctor profile not found. Please create a profile first.',
+      );
+    }
+
+    const updated = await this.doctorProfileRepo.save({ ...profile, ...dto });
+
+    return {
+      message: 'Doctor profile updated successfully',
+      profile: updated,
+    };
+  }
+
+  // ─── Doctor Discovery (any authenticated user) ───────────────────────────────
+
+  /**
+   * GET /doctor
+   * Fetch doctors list with optional filters:
+   *   ?specialization=cardiologist  — case-insensitive partial match
+   *   ?search=rahul                 — partial name match
+   *   ?page=1&limit=10              — pagination
+   *   ?availability=true            — filter by isAvailable
+   */
   async findAll(query: GetDoctorsQueryDto) {
-    const { specialization, search, availability, page = 1, limit = 10 } = query;
+    const { specialization, search, availability } = query;
 
-    const where: Record<string, any> = {}; // filters dynamically add honge
+    // Pagination — defaults applied by DTO, but guard against edge cases here
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 10, 100); // hard cap at 100
+    const skip = (page - 1) * limit;
 
-    if (specialization) where.specialization = ILike(`%${specialization}%`); // case-insensitive match
-    if (search) where.fullName = ILike(`%${search}%`);                       // partial naam search
-    if (availability !== undefined) where.isAvailable = availability;         // availability filter
+    // ── Build where clause ─────────────────────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
-    const skip = (page - 1) * limit; // kitne records skip karne hain
+    if (specialization && specialization.trim() !== '') {
+      where.specialization = ILike(`%${specialization.trim()}%`);
+    }
 
+    if (search && search.trim() !== '') {
+      where.fullName = ILike(`%${search.trim()}%`);
+    }
+
+    if (availability !== undefined) {
+      where.isAvailable = availability;
+    }
+
+    // ── Query ──────────────────────────────────────────────────────────────────
     const [doctors, total] = await this.doctorProfileRepo.findAndCount({
       where,
-      select: { id: true, fullName: true, specialization: true, experience: true, consultationFee: true, isAvailable: true },
+      select: {
+        id: true,
+        fullName: true,
+        specialization: true,
+        experience: true,
+        consultationFee: true,
+        isAvailable: true,
+      },
       skip,
       take: limit,
       order: { fullName: 'ASC' },
     });
 
-    // empty hone par helpful message
-    let message = 'Doctors fetched successfully';
+    // ── Context-aware empty messages ───────────────────────────────────────────
     if (total === 0) {
-      if (search)                       message = `No doctors found matching name "${search}".`;
-      else if (specialization)          message = `No doctors found for specialization "${specialization}".`;
-      else if (availability === true)   message = 'No available doctors found at the moment.';
-      else if (availability === false)  message = 'No unavailable doctors found.';
-      else                              message = 'No doctors are registered on the platform yet.';
+      let message: string;
+
+      if (search && search.trim() !== '') {
+        message = `No doctors found matching the name "${search.trim()}".`;
+      } else if (specialization && specialization.trim() !== '') {
+        message = `No doctors found with specialization "${specialization.trim()}".`;
+      } else if (availability === true) {
+        message = 'No available doctors found at the moment.';
+      } else if (availability === false) {
+        message = 'No unavailable doctors found.';
+      } else {
+        message = 'No doctors are registered on the platform yet.';
+      }
+
+      return {
+        message,
+        doctors: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        },
+      };
     }
 
     return {
-      message,
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      message: 'Doctors fetched successfully',
       doctors,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
-  // GET /doctor/:id — ek doctor ka full profile
+  /**
+   * GET /doctor/:id
+   * Returns full doctor profile by ID.
+   * Throws 404 if not found (including ID = 0 or negative).
+   */
   async findById(id: number) {
     const doctor = await this.doctorProfileRepo.findOne({
       where: { id },
-      select: { id: true, fullName: true, specialization: true, experience: true, qualification: true, consultationFee: true, availabilityHours: true, isAvailable: true, profileDetails: true },
+      select: {
+        id: true,
+        fullName: true,
+        specialization: true,
+        experience: true,
+        qualification: true,
+        consultationFee: true,
+        availabilityHours: true,
+        profileDetails: true,
+        isAvailable: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
-    if (!doctor) throw new NotFoundException(`Doctor with ID ${id} not found.`); // 404
+    if (!doctor) {
+      throw new NotFoundException(`Doctor with ID ${id} not found.`);
+    }
 
-    return { message: 'Doctor profile fetched successfully', doctor };
+    return {
+      message: 'Doctor profile fetched successfully',
+      doctor,
+    };
   }
 
-  // POST /doctor/profile — naya profile banao
-  async createProfile(userId: number, dto: CreateDoctorProfileDto) {
-    const existing = await this.doctorProfileRepo.findOne({ where: { userId } });
-    if (existing) throw new ConflictException('Doctor profile already exists. Use PATCH to update.'); // duplicate check
+  // ─── Legacy aliases (kept for backward compat with old controller routes) ────
 
-    const saved = await this.doctorProfileRepo.save(
-      this.doctorProfileRepo.create({ ...dto, userId }),
-    );
-    return { message: 'Doctor profile created successfully', profile: saved };
+  /** @deprecated Use findAll() */
+  async getDoctors(query: {
+    specialization?: string;
+    search?: string;
+    page?: string;
+    limit?: string;
+    availability?: string;
+  }) {
+    // Convert old string-based query to typed DTO
+    let page = parseInt(query.page ?? '1', 10);
+    let limit = parseInt(query.limit ?? '10', 10);
+
+    if (isNaN(page) || page < 1) {
+      throw new BadRequestException(
+        'Invalid value for "page". Must be a positive integer.',
+      );
+    }
+    if (isNaN(limit) || limit < 1) {
+      throw new BadRequestException(
+        'Invalid value for "limit". Must be a positive integer.',
+      );
+    }
+    if (limit > 100) limit = 100;
+
+    const skip = (page - 1) * limit;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
+
+    if (query.specialization && query.specialization.trim() !== '') {
+      where.specialization = ILike(`%${query.specialization.trim()}%`);
+    }
+    if (query.search && query.search.trim() !== '') {
+      where.fullName = ILike(`%${query.search.trim()}%`);
+    }
+    if (query.availability !== undefined) {
+      where.isAvailable = query.availability === 'true';
+    }
+
+    const [doctors, total] = await this.doctorProfileRepo.findAndCount({
+      where,
+      select: {
+        id: true,
+        fullName: true,
+        specialization: true,
+        experience: true,
+        consultationFee: true,
+        isAvailable: true,
+      },
+      skip,
+      take: limit,
+      order: { fullName: 'ASC' },
+    });
+
+    if (doctors.length === 0) {
+      return {
+        message: 'No doctors found matching the given criteria.',
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 },
+      };
+    }
+
+    return {
+      message: 'Doctors fetched successfully',
+      data: doctors,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
-  // GET /doctor/profile — apna profile dekho
-  async getProfile(userId: number) {
-    const profile = await this.doctorProfileRepo.findOne({ where: { userId } });
-    if (!profile) throw new NotFoundException('Doctor profile not found. Please complete onboarding first.');
+  /** @deprecated Use findById() */
+  async getDoctorById(id: number) {
+    if (isNaN(id) || id < 1) {
+      throw new BadRequestException(
+        'Invalid doctor ID. Must be a positive integer.',
+      );
+    }
 
-    return { message: 'Doctor profile fetched successfully', profile };
-  }
+    const doctor = await this.doctorProfileRepo.findOne({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        specialization: true,
+        experience: true,
+        qualification: true,
+        consultationFee: true,
+        availabilityHours: true,
+        profileDetails: true,
+        isAvailable: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-  // PATCH /doctor/profile — profile update karo
-  async updateProfile(userId: number, dto: UpdateDoctorProfileDto) {
-    const profile = await this.doctorProfileRepo.findOne({ where: { userId } });
-    if (!profile) throw new NotFoundException('Doctor profile not found. Please create a profile first.');
+    if (!doctor) {
+      throw new NotFoundException(`Doctor with ID ${id} not found.`);
+    }
 
-    const updated = await this.doctorProfileRepo.save({ ...profile, ...dto });
-    return { message: 'Doctor profile updated successfully', profile: updated };
+    return {
+      message: 'Doctor profile fetched successfully',
+      data: doctor,
+    };
   }
 }

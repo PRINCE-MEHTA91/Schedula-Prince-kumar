@@ -15,35 +15,43 @@ import { UpdateDoctorProfileDto } from './dto/update-doctor-profile.dto';
 import { GetDoctorsQueryDto } from './dto/get-doctors-query.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
-import { Public } from '../auth/public.decorator';
 
 @Controller('doctor')
 export class DoctorController {
   constructor(private readonly doctorService: DoctorService) {}
 
-  // --- PUBLIC ROUTES (bina login ke) ---
+  // ─── Doctor Discovery (any authenticated user) ─────────────────────────────
 
-  // GET /doctor — saare doctors ki list, optional filters ke saath
-  @Public()
+  /**
+   * GET /doctor
+   * Fetch all doctors with optional filters:
+   *   ?specialization=cardiologist
+   *   ?search=rahul
+   *   ?page=1&limit=10
+   *   ?availability=true
+   */
   @Get()
-  async getAllDoctors(@Query() query: GetDoctorsQueryDto) {
+  async getDoctors(@Query() query: GetDoctorsQueryDto) {
     return this.doctorService.findAll(query);
   }
 
-  // GET /doctor/:id — ek doctor ka full profile ID se
-  @Public()
+  /**
+   * GET /doctor/:id
+   * Fetch a single doctor's full profile by ID.
+   */
   @Get(':id')
-  async getDoctorById(
-    @Param('id', ParseIntPipe) id: number, // valid number ensure karta hai
-  ) {
+  async getDoctorById(@Param('id', ParseIntPipe) id: number) {
     return this.doctorService.findById(id);
   }
 
-  // --- DOCTOR-ONLY ROUTES (login + DOCTOR role zaroori) ---
+  // ─── Doctor Profile Management (DOCTOR role only) ──────────────────────────
 
-  // POST /doctor/profile — doctor apna profile banata hai
-  @Roles(Role.DOCTOR)
+  /**
+   * POST /doctor/profile
+   * Create the authenticated doctor's profile.
+   */
   @Post('profile')
+  @Roles(Role.DOCTOR)
   async createProfile(
     @Request() req: any,
     @Body() createDoctorProfileDto: CreateDoctorProfileDto,
@@ -52,18 +60,23 @@ export class DoctorController {
     return this.doctorService.createProfile(userId, createDoctorProfileDto);
   }
 
-  // GET /doctor/profile — doctor apna khud ka profile dekhta hai
-  // NOTE: :id se pehle hona chahiye warna "profile" ID samajh leta hai
-  @Roles(Role.DOCTOR)
+  /**
+   * GET /doctor/profile
+   * Get the authenticated doctor's own profile.
+   */
   @Get('profile')
+  @Roles(Role.DOCTOR)
   async getProfile(@Request() req: any) {
     const userId: number = req.user.id;
     return this.doctorService.getProfile(userId);
   }
 
-  // PATCH /doctor/profile — doctor apna profile update karta hai
-  @Roles(Role.DOCTOR)
+  /**
+   * PATCH /doctor/profile
+   * Update the authenticated doctor's profile.
+   */
   @Patch('profile')
+  @Roles(Role.DOCTOR)
   async updateProfile(
     @Request() req: any,
     @Body() updateDoctorProfileDto: UpdateDoctorProfileDto,
