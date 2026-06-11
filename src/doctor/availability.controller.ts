@@ -9,15 +9,20 @@ import {
   Query,
   Request,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
 import { AvailabilityService } from './availability.service';
 import { CreateRecurringAvailabilityDto } from './dto/create-recurring-availability.dto';
 import { UpdateRecurringAvailabilityDto } from './dto/update-recurring-availability.dto';
 import { CreateCustomAvailabilityDto } from './dto/create-custom-availability.dto';
+import { GetAvailabilityDto } from './dto/get-availability.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 
 @Controller('doctor/availability')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 
@@ -68,8 +73,8 @@ export class AvailabilityController {
   @Roles(Role.DOCTOR)
   async getAvailabilityByDate(
     @Request() req: any,
-    @Query('date') date: string,
+    @Query() query: GetAvailabilityDto,
   ) {
-    return this.availabilityService.getAvailabilityByDate(req.user.id, date);
+    return this.availabilityService.getAvailabilityByDate(req.user.id, query.date);
   }
 }

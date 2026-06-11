@@ -2,7 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +12,9 @@ import { DoctorProfile } from './entities/doctor-profile.entity';
 import { CreateRecurringAvailabilityDto } from './dto/create-recurring-availability.dto';
 import { UpdateRecurringAvailabilityDto } from './dto/update-recurring-availability.dto';
 import { CreateCustomAvailabilityDto } from './dto/create-custom-availability.dto';
+import { ERROR_MESSAGES, RESPONSE_MESSAGES } from '../constants/messages';
+import { AvailabilityType } from './enums/availability-type.enum';
+import { DayOfWeek } from './enums/day-of-week.enum';
 
 @Injectable()
 export class AvailabilityService {
@@ -27,14 +30,14 @@ export class AvailabilityService {
   private async getDoctorProfileByUserId(userId: number): Promise<DoctorProfile> {
     const profile = await this.doctorProfileRepo.findOne({ where: { userId } });
     if (!profile) {
-      throw new NotFoundException('Doctor profile not found');
+      throw new NotFoundException(ERROR_MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
     }
     return profile;
   }
 
   private validateTimeRange(startTime: string, endTime: string) {
     if (startTime >= endTime) {
-      throw new BadRequestException('Invalid time range: startTime must be before endTime');
+      throw new BadRequestException(ERROR_MESSAGES.TIME_RANGE_INVALID);
     }
   }
 
@@ -45,7 +48,7 @@ export class AvailabilityService {
     for (const slot of slots) {
       // Overlap condition: start1 < end2 AND start2 < end1
       if (newSlot.startTime < slot.endTime && slot.startTime < newSlot.endTime) {
-        throw new BadRequestException('Time slot overlaps with existing availability');
+        throw new BadRequestException(ERROR_MESSAGES.OVERLAP);
       }
     }
   }
@@ -58,6 +61,14 @@ export class AvailabilityService {
     const existing = await this.recurringAvailabilityRepo.find({
       where: { doctorProfileId: profile.id, dayOfWeek: dto.dayOfWeek },
     });
+
+    const isDuplicate = existing.some(
+      (slot) => slot.startTime === dto.startTime && slot.endTime === dto.endTime,
+    );
+    if (isDuplicate) {
+      throw new BadRequestException(ERROR_MESSAGES.DUPLICATE_SLOT);
+    }
+
     this.checkOverlap(existing, { startTime: dto.startTime, endTime: dto.endTime });
 
     const availability = this.recurringAvailabilityRepo.create({
@@ -81,11 +92,11 @@ export class AvailabilityService {
     const availability = await this.recurringAvailabilityRepo.findOne({ where: { id } });
 
     if (!availability) {
-      throw new NotFoundException('Recurring availability not found');
+      throw new NotFoundException(ERROR_MESSAGES.RECURRING_NOT_FOUND);
     }
 
     if (availability.doctorProfileId !== profile.id) {
-      throw new UnauthorizedException('You can only update your own availability');
+      throw new ForbiddenException(ERROR_MESSAGES.UNAUTHORIZED_UPDATE);
     }
 
     const updatedDayOfWeek = dto.dayOfWeek || availability.dayOfWeek;
@@ -110,15 +121,15 @@ export class AvailabilityService {
     const availability = await this.recurringAvailabilityRepo.findOne({ where: { id } });
 
     if (!availability) {
-      throw new NotFoundException('Recurring availability not found');
+      throw new NotFoundException(ERROR_MESSAGES.RECURRING_NOT_FOUND);
     }
 
     if (availability.doctorProfileId !== profile.id) {
-      throw new UnauthorizedException('You can only delete your own availability');
+      throw new ForbiddenException(ERROR_MESSAGES.UNAUTHORIZED_DELETE);
     }
 
     await this.recurringAvailabilityRepo.remove(availability);
-    return { message: 'Availability deleted successfully' };
+    return { message: RESPONSE_MESSAGES.DELETE_SUCCESS };
   }
 
   async createCustomOverride(userId: number, dto: CreateCustomAvailabilityDto) {
@@ -127,7 +138,7 @@ export class AvailabilityService {
     const isAvailable = dto.isAvailable !== false; // defaults to true
     if (isAvailable) {
       if (!dto.startTime || !dto.endTime) {
-        throw new BadRequestException('startTime and endTime are required when isAvailable is true');
+        throw new BadRequestException(ERROR_MESSAGES.TIME_RANGE_REQUIRED);
       }
       this.validateTimeRange(dto.startTime, dto.endTime);
 
@@ -151,12 +162,7 @@ export class AvailabilityService {
 
   async getAvailabilityByDate(userId: number, dateStr: string) {
     const profile = await this.getDoctorProfileByUserId(userId);
-
-    // Date validation
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) {
-      throw new BadRequestException('Invalid date format');
-    }
 
     // Check custom availability first
     const customSlots = await this.customAvailabilityRepo.find({
@@ -167,20 +173,28 @@ export class AvailabilityService {
     if (customSlots.length > 0) {
       // If there's an entry marking the day as unavailable, return empty slots
       if (customSlots.some((slot) => !slot.isAvailable)) {
-        return { date: dateStr, slots: [], type: 'custom-unavailable' };
+        return { date: dateStr, slots: [], type: AvailabilityType.CUSTOM_UNAVAILABLE };
       }
-      return { date: dateStr, slots: customSlots, type: 'custom' };
+      return { date: dateStr, slots: customSlots, type: AvailabilityType.CUSTOM };
     }
 
     // Fallback to recurring
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days: DayOfWeek[] = [
+      DayOfWeek.SUNDAY,
+      DayOfWeek.MONDAY,
+      DayOfWeek.TUESDAY,
+      DayOfWeek.WEDNESDAY,
+      DayOfWeek.THURSDAY,
+      DayOfWeek.FRIDAY,
+      DayOfWeek.SATURDAY,
+    ];
     const dayOfWeek = days[date.getDay()];
 
     const recurringSlots = await this.recurringAvailabilityRepo.find({
-      where: { doctorProfileId: profile.id, dayOfWeek: dayOfWeek as any },
+      where: { doctorProfileId: profile.id, dayOfWeek },
       order: { startTime: 'ASC' },
     });
 
-    return { date: dateStr, slots: recurringSlots, type: 'recurring' };
+    return { date: dateStr, slots: recurringSlots, type: AvailabilityType.RECURRING };
   }
 }

@@ -8,7 +8,10 @@ import {
   Post,
   Query,
   Request,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorProfileDto } from './dto/create-doctor-profile.dto';
 import { UpdateDoctorProfileDto } from './dto/update-doctor-profile.dto';
@@ -17,6 +20,7 @@ import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 
 @Controller('doctor')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class DoctorController {
   constructor(private readonly doctorService: DoctorService) {}
 

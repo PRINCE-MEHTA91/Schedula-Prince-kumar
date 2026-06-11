@@ -5,7 +5,10 @@ import {
   Patch,
   Post,
   Request,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
 import { PatientService } from './patient.service';
 import { CreatePatientProfileDto } from './dto/create-patient-profile.dto';
 import { UpdatePatientProfileDto } from './dto/update-patient-profile.dto';
@@ -13,6 +16,7 @@ import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 
 @Controller('patient')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.PATIENT) // All routes in this controller require PATIENT role
 export class PatientController {
   constructor(private readonly patientService: PatientService) {}

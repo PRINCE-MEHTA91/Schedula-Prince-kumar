@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { SignupDto } from './signup.dto';
 import { LoginDto } from './login.dto';
 import { User } from './user.entity';
+import { ERROR_MESSAGES } from '../constants/messages';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +26,7 @@ export class AuthService {
     // Check if email already exists in DB
     const existingUser = await this.userRepo.findOne({ where: { email } });
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException(ERROR_MESSAGES.EMAIL_EXISTS);
     }
 
     // Hash the password
@@ -61,13 +62,13 @@ export class AuthService {
     // Find user by email from DB
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
     }
 
     // Generate JWT token

@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { PatientProfile } from './entities/patient-profile.entity';
 import { CreatePatientProfileDto } from './dto/create-patient-profile.dto';
 import { UpdatePatientProfileDto } from './dto/update-patient-profile.dto';
+import { ERROR_MESSAGES } from '../constants/messages';
 
 @Injectable()
 export class PatientService {
@@ -22,9 +23,7 @@ export class PatientService {
       where: { userId },
     });
     if (existing) {
-      throw new ConflictException(
-        'Patient profile already exists. Use PATCH to update.',
-      );
+      throw new ConflictException(ERROR_MESSAGES.PATIENT_PROFILE_EXISTS);
     }
 
     const profile = this.patientProfileRepo.create({
@@ -46,9 +45,7 @@ export class PatientService {
     });
 
     if (!profile) {
-      throw new NotFoundException(
-        'Patient profile not found. Please complete onboarding first.',
-      );
+      throw new NotFoundException(ERROR_MESSAGES.PATIENT_PROFILE_NOT_FOUND);
     }
 
     return {
@@ -63,9 +60,7 @@ export class PatientService {
     });
 
     if (!profile) {
-      throw new NotFoundException(
-        'Patient profile not found. Please create a profile first.',
-      );
+      throw new NotFoundException(ERROR_MESSAGES.PATIENT_PROFILE_NOT_FOUND);
     }
 
     const updated = await this.patientProfileRepo.save({

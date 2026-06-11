@@ -10,6 +10,7 @@ import { DoctorProfile } from './entities/doctor-profile.entity';
 import { CreateDoctorProfileDto } from './dto/create-doctor-profile.dto';
 import { UpdateDoctorProfileDto } from './dto/update-doctor-profile.dto';
 import { GetDoctorsQueryDto } from './dto/get-doctors-query.dto';
+import { ERROR_MESSAGES, getDoctorNotFoundMessage } from '../constants/messages';
 
 @Injectable()
 export class DoctorService {
@@ -25,9 +26,7 @@ export class DoctorService {
       where: { userId },
     });
     if (existing) {
-      throw new ConflictException(
-        'Doctor profile already exists. Use PATCH to update.',
-      );
+      throw new ConflictException(ERROR_MESSAGES.DOCTOR_PROFILE_EXISTS);
     }
 
     const profile = this.doctorProfileRepo.create({ ...dto, userId });
@@ -45,9 +44,7 @@ export class DoctorService {
     });
 
     if (!profile) {
-      throw new NotFoundException(
-        'Doctor profile not found. Please complete onboarding first.',
-      );
+      throw new NotFoundException(ERROR_MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
     }
 
     return {
@@ -62,9 +59,7 @@ export class DoctorService {
     });
 
     if (!profile) {
-      throw new NotFoundException(
-        'Doctor profile not found. Please create a profile first.',
-      );
+      throw new NotFoundException(ERROR_MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
     }
 
     const updated = await this.doctorProfileRepo.save({ ...profile, ...dto });
@@ -189,7 +184,7 @@ export class DoctorService {
     });
 
     if (!doctor) {
-      throw new NotFoundException(`Doctor with ID ${id} not found.`);
+      throw new NotFoundException(getDoctorNotFoundMessage(id));
     }
 
     return {
@@ -295,7 +290,7 @@ export class DoctorService {
     });
 
     if (!doctor) {
-      throw new NotFoundException(`Doctor with ID ${id} not found.`);
+      throw new NotFoundException(getDoctorNotFoundMessage(id));
     }
 
     return {
