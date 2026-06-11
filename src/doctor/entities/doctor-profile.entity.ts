@@ -8,6 +8,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../auth/user.entity';
+import { RecurringAvailability } from './recurring-availability.entity';
+import { CustomAvailability } from './custom-availability.entity';
+import { OneToMany } from 'typeorm';
 
 @Entity('doctor_profiles')
 export class DoctorProfile {
@@ -45,6 +48,12 @@ export class DoctorProfile {
 
   @Column()
   userId: number;
+
+  @OneToMany(() => RecurringAvailability, (availability) => availability.doctorProfile)
+  recurringAvailabilities: RecurringAvailability[];
+
+  @OneToMany(() => CustomAvailability, (availability) => availability.doctorProfile)
+  customAvailabilities: CustomAvailability[];
 
   @CreateDateColumn()
   createdAt: Date;

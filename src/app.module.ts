@@ -14,6 +14,9 @@ import { PatientModule } from './patient/patient.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
 
+import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from './doctor/entities/custom-availability.entity';
+
 /**
  * Root application module.
  * Registers all feature modules: Auth, Doctor, Patient.
@@ -29,7 +32,7 @@ import { PatientProfile } from './patient/entities/patient-profile.entity';
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, DoctorProfile, PatientProfile],
+      entities: [User, DoctorProfile, PatientProfile, RecurringAvailability, CustomAvailability],
       synchronize: false, // Use migrations instead of auto-sync
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
