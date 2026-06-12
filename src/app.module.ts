@@ -13,6 +13,10 @@ import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
+import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from './doctor/entities/custom-availability.entity';
+import { Appointment } from './patient/entities/appointment.entity';
+
 
 /**
  * Root application module.
@@ -29,8 +33,8 @@ import { PatientProfile } from './patient/entities/patient-profile.entity';
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, DoctorProfile, PatientProfile],
-      synchronize: false, // Use migrations instead of auto-sync
+      entities: [User, DoctorProfile, PatientProfile, RecurringAvailability, CustomAvailability, Appointment],
+      synchronize: true, // Auto-sync in dev to fix missing columns
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
     }),
