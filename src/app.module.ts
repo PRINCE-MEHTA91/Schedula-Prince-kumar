@@ -18,6 +18,9 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
 import { Appointment } from './patient/entities/appointment.entity';
 
 
+import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from './doctor/entities/custom-availability.entity';
+
 /**
  * Root application module.
  * Registers all feature modules: Auth, Doctor, Patient.
@@ -33,8 +36,15 @@ import { Appointment } from './patient/entities/appointment.entity';
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, DoctorProfile, PatientProfile, RecurringAvailability, CustomAvailability, Appointment],
-      synchronize: true, // Auto-sync in dev to fix missing columns
+<<entities: [
+        User,
+        DoctorProfile,
+        PatientProfile,
+        RecurringAvailability,
+        CustomAvailability,
+        Appointment,
+      ],
+      synchronize: false,
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
     }),

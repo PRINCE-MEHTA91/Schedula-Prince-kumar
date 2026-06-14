@@ -12,6 +12,14 @@ import { AvailabilityController } from './availability.controller';
 @Module({
   imports: [TypeOrmModule.forFeature([DoctorProfile, RecurringAvailability, CustomAvailability, Appointment])],
   controllers: [DoctorController, AvailabilityController],
+  imports: [
+    TypeOrmModule.forFeature([
+      DoctorProfile,
+      RecurringAvailability,
+      CustomAvailability,
+    ]),
+  ],
+  controllers: [AvailabilityController, DoctorController],
   providers: [DoctorService, AvailabilityService],
 })
 export class DoctorModule {}

@@ -20,6 +20,12 @@ export class CustomAvailability {
   @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'doctorId' })
   doctor: DoctorProfile;
+  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'doctorProfileId' })
+  doctorProfile: DoctorProfile;
+
+  @Column()
+  doctorProfileId: number;
 
   @Column({ type: 'date' })
   date: string;
@@ -31,6 +37,12 @@ export class CustomAvailability {
   endTime: string | null;
 
   @Column({ default: true })
+  startTime: string;
+
+  @Column({ type: 'time', nullable: true })
+  endTime: string;
+
+  @Column({ type: 'boolean', default: true })
   isAvailable: boolean;
 
   @CreateDateColumn()

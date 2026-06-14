@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { DoctorProfile } from './doctor-profile.entity';
+import { DayOfWeek } from '../enums/day-of-week.enum';
 
 @Entity('recurring_availability')
 export class RecurringAvailability {
@@ -24,6 +25,18 @@ export class RecurringAvailability {
   // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   @Column({ type: 'int' })
   dayOfWeek: number;
+  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'doctorProfileId' })
+  doctorProfile: DoctorProfile;
+
+  @Column()
+  doctorProfileId: number;
+
+  @Column({
+    type: 'enum',
+    enum: DayOfWeek,
+  })
+  dayOfWeek: DayOfWeek;
 
   @Column({ type: 'time' })
   startTime: string;
