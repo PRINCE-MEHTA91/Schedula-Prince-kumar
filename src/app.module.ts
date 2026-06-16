@@ -11,8 +11,12 @@ import { User } from './auth/user.entity';
 import { UsersModule } from './users/users.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
+import { AppointmentModule } from './appointment/appointment.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
+import { DoctorSchedule } from './appointment/entities/doctor-schedule.entity';
+import { AppointmentSlot } from './appointment/entities/appointment-slot.entity';
+import { WaveBooking } from './appointment/entities/wave-booking.entity';
 
 /**
  * Root application module.
@@ -29,7 +33,7 @@ import { PatientProfile } from './patient/entities/patient-profile.entity';
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, DoctorProfile, PatientProfile],
+      entities: [User, DoctorProfile, PatientProfile, DoctorSchedule, AppointmentSlot, WaveBooking],
       synchronize: false, // Use migrations instead of auto-sync
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
@@ -39,6 +43,7 @@ import { PatientProfile } from './patient/entities/patient-profile.entity';
     UsersModule,
     DoctorModule,
     PatientModule,
+    AppointmentModule,
   ],
   controllers: [AppController],
   providers: [
