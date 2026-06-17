@@ -7,6 +7,9 @@ dotenv.config();
 import { User } from './auth/user.entity';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
+import { Appointment } from './appointment/entities/appointment.entity';
+import { StreamSlot } from './appointment/entities/stream-slot.entity';
+import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -14,7 +17,7 @@ export const AppDataSource = new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
-  entities: [User, DoctorProfile, PatientProfile],
+  entities: [User, DoctorProfile, PatientProfile, Appointment, StreamSlot, WaveSchedule],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
   logging: false,
