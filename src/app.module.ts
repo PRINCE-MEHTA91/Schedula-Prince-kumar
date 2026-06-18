@@ -14,21 +14,13 @@ import { PatientModule } from './patient/patient.module';
 import { AppointmentModule } from './appointment/appointment.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
-import { DoctorSchedule } from './appointment/entities/doctor-schedule.entity';
-import { AppointmentSlot } from './appointment/entities/appointment-slot.entity';
-import { WaveBooking } from './appointment/entities/wave-booking.entity';
 import { Appointment } from './appointment/entities/appointment.entity';
-import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
-import { CustomAvailability } from './doctor/entities/custom-availability.entity';
-import { Appointment } from './patient/entities/appointment.entity';
-
-
 import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
 
 /**
  * Root application module.
- * Registers all feature modules: Auth, Doctor, Patient.
+ * Registers all feature modules: Auth, Doctor, Patient, Appointment.
  */
 @Module({
   imports: [
@@ -41,18 +33,15 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, DoctorProfile, PatientProfile, DoctorSchedule, AppointmentSlot, WaveBooking],
-      entities: [User, DoctorProfile, PatientProfile, Appointment],
-      synchronize: false, // Use migrations instead of auto-sync
-<<entities: [
+      entities: [
         User,
         DoctorProfile,
         PatientProfile,
+        Appointment,
         RecurringAvailability,
         CustomAvailability,
-        Appointment,
       ],
-      synchronize: false,
+      synchronize: false, // Use migrations instead of auto-sync
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
     }),

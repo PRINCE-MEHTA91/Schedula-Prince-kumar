@@ -3,39 +3,26 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { DoctorProfile } from './doctor-profile.entity';
 import { DayOfWeek } from '../enums/day-of-week.enum';
 
-@Entity('recurring_availability')
+@Entity()
 export class RecurringAvailability {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  doctorId: number;
+  doctorProfileId: number;
 
-  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'doctorId' })
-  doctor: DoctorProfile;
-
-  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  @Column({ type: 'int' })
-  dayOfWeek: number;
-  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => DoctorProfile, (profile) => profile.recurringAvailabilities, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'doctorProfileId' })
   doctorProfile: DoctorProfile;
 
-  @Column()
-  doctorProfileId: number;
-
-  @Column({
-    type: 'enum',
-    enum: DayOfWeek,
-  })
+  @Column({ type: 'enum', enum: DayOfWeek })
   dayOfWeek: DayOfWeek;
 
   @Column({ type: 'time' })

@@ -7,30 +7,16 @@ import { Appointment } from '../patient/entities/appointment.entity';
 import { DoctorService } from './doctor.service';
 import { DoctorController } from './doctor.controller';
 import { AppointmentModule } from '../appointment/appointment.module';
-
-@Module({
-  imports: [
-    TypeOrmModule.forFeature([DoctorProfile]),
-    // forwardRef to avoid circular dependency (AppointmentModule also imports DoctorProfile)
-    forwardRef(() => AppointmentModule),
-  ],
-  controllers: [DoctorController],
-  providers: [DoctorService],
-  exports: [DoctorService],
 import { AvailabilityService } from './availability.service';
 import { AvailabilityController } from './availability.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DoctorProfile, RecurringAvailability, CustomAvailability, Appointment])],
-  controllers: [DoctorController, AvailabilityController],
   imports: [
-    TypeOrmModule.forFeature([
-      DoctorProfile,
-      RecurringAvailability,
-      CustomAvailability,
-    ]),
+    TypeOrmModule.forFeature([DoctorProfile, RecurringAvailability, CustomAvailability, Appointment]),
+    forwardRef(() => AppointmentModule),
   ],
-  controllers: [AvailabilityController, DoctorController],
+  controllers: [DoctorController, AvailabilityController],
   providers: [DoctorService, AvailabilityService],
+  exports: [DoctorService],
 })
 export class DoctorModule {}

@@ -65,7 +65,7 @@ export class AppointmentService {
 
     // Resolve availability for the date
     const customAvailabilities = await this.customRepo.find({
-      where: { doctorId: dto.doctorId, date: dto.date },
+      where: { doctorProfileId: dto.doctorId, date: dto.date },
     });
 
     let isValidSlot = false;
@@ -82,7 +82,7 @@ export class AppointmentService {
       // Use recurring availability
       const dayOfWeek = bookingDate.getDay();
       const recurring = await this.recurringRepo.find({
-        where: { doctorId: dto.doctorId, dayOfWeek },
+        where: { doctorProfileId: dto.doctorId, dayOfWeek: dayOfWeek as any },
       });
       isValidSlot = recurring.some(
         (r) => dto.startTime + ':00' >= r.startTime && endTime <= r.endTime,

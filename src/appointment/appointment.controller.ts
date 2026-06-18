@@ -9,178 +9,54 @@ import {
   Request,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
-import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { BookAppointmentDto } from './dto/book-appointment.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
+import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 @Controller('appointment')
 export class AppointmentController {
-  constructor(private readonly appointmentService: AppointmentService) {}
+  constructor(private readonly appointmentService: AppointmentService) { }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ─── Patient Routes ───────────────────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * POST /appointment/book
-   * Book a new appointment (Stream or Wave).
-   */
-  @Post('book')
+  // POST /appointment — Book a new appointment (PATIENT only)
+  @Post()
   @Roles(Role.PATIENT)
   async bookAppointment(
     @Request() req: any,
     @Body() dto: BookAppointmentDto,
   ) {
-    return this.appointmentService.bookAppointment(req.user.id, dto);
+    const patientUserId: number = req.user.id;
+    return this.appointmentService.bookAppointment(patientUserId, dto);
   }
 
-  /**
-   * PATCH /appointment/:id/reschedule
-   * Reschedule an existing appointment to a new slot or wave.
-   */
-  @Patch(':id/reschedule')
-  @Roles(Role.PATIENT)
-  async rescheduleAppointment(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) appointmentId: number,
-    @Body() dto: RescheduleAppointmentDto,
-  ) {
-    return this.appointmentService.rescheduleAppointment(
-      req.user.id,
-      appointmentId,
-      dto,
-    );
-  }
-
-  /**
-   * PATCH /appointment/:id/cancel
-   * Cancel an existing appointment.
-   * Cannot cancel within 30 minutes of start time.
-   */
-  @Patch(':id/cancel')
-  @Roles(Role.PATIENT)
-  async cancelAppointment(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) appointmentId: number,
-  ) {
-    return this.appointmentService.cancelAppointment(
-      req.user.id,
-      appointmentId,
-    );
-  }
-
-  /**
-   * GET /appointment/my
-   * View all appointments for the logged-in patient.
-   */
+  // GET /appointment/my — Patient views their own appointments (PATIENT only)
   @Get('my')
   @Roles(Role.PATIENT)
   async getMyAppointments(@Request() req: any) {
-    return this.appointmentService.getMyAppointments(req.user.id);
+    const patientUserId: number = req.user.id;
+    return this.appointmentService.getMyAppointments(patientUserId);
   }
 
-  /**
-   * GET /appointment/stream-slots/:doctorId
-   * View all upcoming stream slots for a doctor.
-   * Optional query: ?available=true — only show unbooked slots.
-   */
-  @Get('stream-slots/:doctorId')
+  // PATCH /appointment/:id — Patient reschedules their appointment (PATIENT only)
+  @Patch(':id')
   @Roles(Role.PATIENT)
-  async getStreamSlots(
-    @Param('doctorId', ParseIntPipe) doctorId: number,
-    @Query('available') available?: string,
+  async rescheduleAppointment(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+    @Body() dto: UpdateAppointmentDto,
   ) {
-    const onlyAvailable = available === 'true';
-    return this.appointmentService.getStreamSlotsByDoctor(
-      doctorId,
-      onlyAvailable,
-    );
+    const patientUserId: number = req.user.id;
+    return this.appointmentService.rescheduleAppointment(id, patientUserId, dto);
   }
 
-  /**
-   * GET /appointment/wave-schedules/:doctorId
-   * View all upcoming wave schedules for a doctor.
-   * Optional query: ?available=true — only show waves with capacity.
-   */
-  @Get('wave-schedules/:doctorId')
+  // PATCH /appointment/:id/cancel — Patient cancels their appointment (PATIENT only)
+  @Patch(':id/cancel')
   @Roles(Role.PATIENT)
-  async getWaveSchedules(
-    @Param('doctorId', ParseIntPipe) doctorId: number,
-    @Query('available') available?: string,
-  ) {
-    const onlyAvailable = available === 'true';
-    return this.appointmentService.getWaveSchedulesByDoctor(
-      doctorId,
-      onlyAvailable,
-    );
-  }
-
-  /**
-   * POST /appointment/schedule
-   * Unified route — Doctor creates either a STREAM or WAVE schedule.
-   *
-   * STREAM body:
-   * {
-   *   "schedulingType": "STREAM",
-   *   "date": "2026-07-01",
-   *   "startTime": "10:00",
-   *   "endTime": "11:00",
-   *   "slotDuration": 15,
-   *   "bufferTime": 5
-   * }
-   *
-   * WAVE body:
-   * {
-   *   "schedulingType": "WAVE",
-   *   "date": "2026-07-01",
-   *   "startTime": "10:00",
-   *   "endTime": "11:00",
-   *   "maxCapacity": 5
-   * }
-   */
-  @Post('schedule')
-  @Roles(Role.DOCTOR)
-  async createSchedule(
+  async cancelAppointment(
+    @Param('id', ParseIntPipe) id: number,
     @Request() req: any,
-    @Body() dto: CreateScheduleDto,
   ) {
-    return this.appointmentService.createSchedule(req.user.id, dto);
-  }
-
-  /**
-   * POST /appointment/stream-slot  (kept for backward compatibility)
-   * Doctor creates stream slots from a time window.
-   */
-  @Post('stream-slot')
-  @Roles(Role.DOCTOR)
-  async createStreamSlot(
-    @Request() req: any,
-    @Body() dto: CreateStreamSlotDto,
-  ) {
-    return this.appointmentService.createStreamSlot(req.user.id, dto);
-  }
-
-  /**
-   * POST /appointment/wave-schedule  (kept for backward compatibility)
-   * Doctor creates a wave scheduling window.
-   */
-  @Post('wave-schedule')
-  @Roles(Role.DOCTOR)
-  async createWaveSchedule(
-    @Request() req: any,
-    @Body() dto: CreateWaveScheduleDto,
-  ) {
-    return this.appointmentService.createWaveSchedule(req.user.id, dto);
-  }
-
-  /**
-   * GET /appointment/my-schedule
-   * Doctor views all their appointments.
-   */
-  @Get('my-schedule')
-  @Roles(Role.DOCTOR)
-  async getDoctorAppointments(@Request() req: any) {
-    return this.appointmentService.getDoctorAppointments(req.user.id);
+    const patientUserId: number = req.user.id;
+    return this.appointmentService.cancelAppointment(id, patientUserId);
   }
 }

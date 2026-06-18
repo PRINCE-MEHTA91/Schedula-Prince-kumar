@@ -1,45 +1,31 @@
-import {
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsPositive,
-  IsString,
-  MaxLength,
-  ValidateIf,
-} from 'class-validator';
-import { SchedulingType } from '../entities/appointment.entity';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class BookAppointmentDto {
-  @IsInt()
-  @IsPositive()
+  // The doctor's profile ID (from GET /doctor)
+  @IsNotEmpty({ message: 'doctorId is required' })
   doctorId: number;
 
-  @IsEnum(SchedulingType)
-  schedulingType: SchedulingType;
-
-  /**
-   * Required when schedulingType = STREAM.
-   * The ID of the stream slot to book.
-   */
-  @ValidateIf((o) => o.schedulingType === SchedulingType.STREAM)
-  @IsInt()
-  @IsPositive()
-  @IsNotEmpty()
-  streamSlotId?: number;
-
-  /**
-   * Required when schedulingType = WAVE.
-   * The ID of the wave schedule to join.
-   */
-  @ValidateIf((o) => o.schedulingType === SchedulingType.WAVE)
-  @IsInt()
-  @IsPositive()
-  @IsNotEmpty()
-  waveScheduleId?: number;
-
-  @IsOptional()
+  // Date in YYYY-MM-DD format e.g. "2026-06-20"
   @IsString()
-  @MaxLength(500)
-  notes?: string;
+  @IsNotEmpty({ message: 'date is required' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'date must be in YYYY-MM-DD format e.g. 2026-06-20',
+  })
+  date: string;
+
+  // Start time in HH:mm format e.g. "10:00"
+  @IsString()
+  @IsNotEmpty({ message: 'startTime is required' })
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'startTime must be in HH:mm format e.g. 10:00',
+  })
+  startTime: string;
+
+  // End time in HH:mm format e.g. "10:15"
+  @IsString()
+  @IsNotEmpty({ message: 'endTime is required' })
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'endTime must be in HH:mm format e.g. 10:15',
+  })
+  endTime: string;
 }

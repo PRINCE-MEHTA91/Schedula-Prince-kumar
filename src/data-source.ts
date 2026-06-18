@@ -10,6 +10,8 @@ import { PatientProfile } from './patient/entities/patient-profile.entity';
 import { Appointment } from './appointment/entities/appointment.entity';
 import { StreamSlot } from './appointment/entities/stream-slot.entity';
 import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
+import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from './doctor/entities/custom-availability.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -17,10 +19,16 @@ export const AppDataSource = new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
-  entities: [User, DoctorProfile, PatientProfile, Appointment, StreamSlot, WaveSchedule],
-  entities: [User, DoctorProfile, PatientProfile, DoctorSchedule, AppointmentSlot, WaveBooking],
-  entities: [User, DoctorProfile, PatientProfile, Appointment],
-  entities: [User, DoctorProfile, PatientProfile, RecurringAvailability, CustomAvailability],
+  entities: [
+    User,
+    DoctorProfile,
+    PatientProfile,
+    Appointment,
+    StreamSlot,
+    WaveSchedule,
+    RecurringAvailability,
+    CustomAvailability,
+  ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
   logging: false,

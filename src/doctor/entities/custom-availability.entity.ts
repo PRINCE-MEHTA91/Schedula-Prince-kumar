@@ -3,47 +3,35 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { DoctorProfile } from './doctor-profile.entity';
 
-@Entity('custom_availability')
+@Entity()
 export class CustomAvailability {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  doctorId: number;
+  doctorProfileId: number;
 
-  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'doctorId' })
-  doctor: DoctorProfile;
-  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
+  @ManyToOne(() => DoctorProfile, (profile) => profile.customAvailabilities, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'doctorProfileId' })
   doctorProfile: DoctorProfile;
 
-  @Column()
-  doctorProfileId: number;
-
   @Column({ type: 'date' })
   date: string;
+
+  @Column({ type: 'boolean', default: true })
+  isAvailable: boolean;
 
   @Column({ type: 'time', nullable: true })
   startTime: string | null;
 
   @Column({ type: 'time', nullable: true })
   endTime: string | null;
-
-  @Column({ default: true })
-  startTime: string;
-
-  @Column({ type: 'time', nullable: true })
-  endTime: string;
-
-  @Column({ type: 'boolean', default: true })
-  isAvailable: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -48,15 +48,6 @@ export class DoctorController {
     return this.doctorService.getProfile(userId);
   }
 
-  /**
-   * GET /doctor/appointments — Doctor views all their booked appointments
-   */
-  @Get('appointments')
-  @Roles(Role.DOCTOR)
-  async getMyAppointments(@Request() req: any) {
-    const doctorUserId: number = req.user.id;
-    return this.appointmentService.getDoctorAppointments(doctorUserId);
-  }
 
   /**
    * GET /doctor/availability — Doctor's own availability
@@ -72,19 +63,6 @@ export class DoctorController {
     };
   }
 
-  /**
-   * GET /doctor/:id/slots — Fetch available slots for a doctor on a specific date
-   */
-  @Get(':id/slots')
-  async getDoctorSlots(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('date') date: string,
-  ) {
-    if (!date) {
-      throw new BadRequestException('Date query parameter is required (YYYY-MM-DD).');
-    }
-    return this.appointmentService.getAvailableSlots(id, date);
-  }
 
   /**
    * GET /doctor/:id — Public: get any doctor by ID
