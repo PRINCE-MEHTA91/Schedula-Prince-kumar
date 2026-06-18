@@ -6,37 +6,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
   Request,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
-import { BookAppointmentDto } from './dto/book-appointment.dto';
-import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
-import { CreateStreamSlotDto } from './dto/create-stream-slot.dto';
-import { CreateWaveScheduleDto } from './dto/create-wave-schedule.dto';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { BookAppointmentDto } from './dto/book-appointment.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 
-/**
- * Appointment Controller
- *
- * Routes are split between PATIENT and DOCTOR roles.
- * The global JwtAuthGuard + RolesGuard are applied via app.module.ts.
- *
- * Patient Routes:
- *   POST   /appointment/book                          — Book an appointment
- *   PATCH  /appointment/:id/reschedule                — Reschedule
- *   PATCH  /appointment/:id/cancel                    — Cancel
- *   GET    /appointment/my                            — View my appointments
- *   GET    /appointment/stream-slots/:doctorId        — View doctor's stream slots
- *   GET    /appointment/wave-schedules/:doctorId      — View doctor's wave schedules
- *
- * Doctor Routes:
- *   POST   /appointment/stream-slot                   — Create a stream slot
- *   POST   /appointment/wave-schedule                 — Create a wave schedule
- *   GET    /appointment/my-schedule                   — View my appointments
- */
 @Controller('appointment')
 export class AppointmentController {
   constructor(private readonly appointmentService: AppointmentService) {}

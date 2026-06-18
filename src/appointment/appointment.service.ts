@@ -6,27 +6,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, MoreThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
-  Appointment,
-  AppointmentStatus,
+  DoctorSchedule,
   SchedulingType,
-} from './entities/appointment.entity';
-import { StreamSlot } from './entities/stream-slot.entity';
-import { WaveSchedule } from './entities/wave-schedule.entity';
+} from './entities/doctor-schedule.entity';
+import { AppointmentSlot } from './entities/appointment-slot.entity';
+import { WaveBooking } from './entities/wave-booking.entity';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.entity';
+import { PatientProfile } from '../patient/entities/patient-profile.entity';
+import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { BookAppointmentDto } from './dto/book-appointment.dto';
+import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.entity';
 import { PatientProfile } from '../patient/entities/patient-profile.entity';
 import { BookAppointmentDto } from './dto/book-appointment.dto';
-import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
-import { CreateStreamSlotDto } from './dto/create-stream-slot.dto';
-import { CreateWaveScheduleDto } from './dto/create-wave-schedule.dto';
-import {
-  CreateScheduleDto,
-  ScheduleCreationType,
-} from './dto/create-schedule.dto';
-
-/** Cutoff: cannot cancel/reschedule within 30 minutes of appointment start. */
-const CUTOFF_MINUTES = 30;
+import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 @Injectable()
 export class AppointmentService {
@@ -432,331 +427,167 @@ export class AppointmentService {
     });
     if (existing) {
       throw new ConflictException(
-        'You already have a confirmed booking in this wave.',
+        `This slot (${dto.startTime} on ${dto.date}) is already booked. Please choose another slot.`,
       );
     }
 
-    // ── Atomic transaction ──────────────────────────────────────────────────
-    return this.dataSource.transaction(async (manager) => {
-      const lockedWave = await manager
-        .createQueryBuilder(WaveSchedule, 'wave')
-        .setLock('pessimistic_write')
-        .where('wave.id = :id', { id: wave.id })
-        .getOne();
-
-      if (!lockedWave || lockedWave.bookedCount >= lockedWave.capacity) {
-        const suggestion = await this.suggestNextWaveSchedule(
-          doctor.id,
-          wave.date,
-        );
-        throw new ConflictException({
-          message: 'Wave just became full.',
-          suggestion,
-        });
-      }
-
-      const token = lockedWave.bookedCount + 1;
-      lockedWave.bookedCount += 1;
-      await manager.save(WaveSchedule, lockedWave);
-
-      const appointment = manager.create(Appointment, {
-        patientId: patient.id,
-        doctorId: doctor.id,
-        schedulingType: SchedulingType.WAVE,
-        streamSlotId: null,
-        waveScheduleId: wave.id,
-        waveToken: token,
-        appointmentDate: wave.date,
-        startTime: wave.startTime,
-        endTime: wave.endTime,
-        status: AppointmentStatus.CONFIRMED,
-        notes: dto.notes ?? null,
-      });
-
-      const saved = await manager.save(Appointment, appointment);
-
-      return {
-        message: 'Appointment booked successfully (Wave)',
-        appointment: saved,
-        waveToken: token,
-      };
+    // All checks passed — create the appointment
+    const appointment = this.appointmentRepo.create({
+      doctorId: dto.doctorId,
+      patientId: patient.id,
+      date: dto.date,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      status: AppointmentStatus.BOOKED,
     });
+
+    const saved = await this.appointmentRepo.save(appointment);
+
+    return {
+      message: 'Appointment booked successfully',
+      appointment: saved,
+    };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ─── Patient: Reschedule Appointment ────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ─── 2. Get Patient's Own Appointments ───────────────────────────────────────
 
-  async rescheduleAppointment(
-    patientUserId: number,
-    appointmentId: number,
-    dto: RescheduleAppointmentDto,
-  ) {
-    const patientProfile = await this.getPatientProfileByUserId(patientUserId);
+  async getMyAppointments(patientUserId: number) {
+    // First find the patient profile
+    const patient = await this.patientRepo.findOne({
+      where: { userId: patientUserId },
+    });
+    if (!patient) {
+      throw new NotFoundException(
+        'Patient profile not found. Please complete your profile first.',
+      );
+    }
 
-    // ── 1. Fetch appointment ────────────────────────────────────────────────
+    // Get all appointments for this patient with doctor info
+    const appointments = await this.appointmentRepo.find({
+      where: { patientId: patient.id },
+      relations: { doctor: true }, // brings in DoctorProfile data
+      order: { date: 'ASC', startTime: 'ASC' },
+    });
+
+    if (appointments.length === 0) {
+      return {
+        message: 'You have no appointments yet.',
+        appointments: [],
+      };
+    }
+
+    // Shape the response — only return what patient needs to see
+    const result = appointments.map((appt) => ({
+      id: appt.id,
+      date: appt.date,
+      startTime: appt.startTime,
+      endTime: appt.endTime,
+      status: appt.status,
+      doctor: {
+        id: appt.doctor.id,
+        fullName: appt.doctor.fullName,
+        specialization: appt.doctor.specialization,
+        consultationFee: appt.doctor.consultationFee,
+      },
+    }));
+
+    return {
+      message: 'Appointments fetched successfully',
+      appointments: result,
+    };
+  }
+
+  // ─── 3. Reschedule Appointment (PATIENT only) ────────────────────────────────
+
+  async rescheduleAppointment(appointmentId: number, patientUserId: number, dto: UpdateAppointmentDto) {
+    const appointment = await this.appointmentRepo.findOne({
+      where: { id: appointmentId },
+      relations: { doctor: true, patient: true },
+    });
+
+    if (!appointment) throw new NotFoundException('Appointment not found');
+    if (appointment.patient.userId !== patientUserId) throw new ForbiddenException('Not authorized to update this appointment');
+    if (appointment.status === AppointmentStatus.CANCELLED) throw new BadRequestException('Cannot update a cancelled appointment');
+
+    const newDate = dto.date || appointment.date;
+    const newStartTime = dto.startTime || appointment.startTime;
+    const newEndTime = dto.endTime || appointment.endTime;
+
+    // Step 3: Check future date
+    const appointmentDateTime = new Date(`${newDate}T${newStartTime}:00`);
+    if (appointmentDateTime <= new Date()) throw new BadRequestException('Must be a future date and time');
+
+    // Step 4: Validate against doctor's availability
+    const parsedAvail = this.parseAvailability(appointment.doctor.availabilityHours);
+    if (!parsedAvail) throw new BadRequestException('Doctor has no valid availability hours set.');
+
+    const { startDay, endDay, startMin, endMin } = parsedAvail;
+    const requestDateObj = new Date(`${newDate}T00:00:00`);
+    const requestDay = requestDateObj.getDay();
+
+    if (!this.isDayInRange(requestDay, startDay, endDay)) {
+      throw new BadRequestException('Doctor is not available on this day of the week.');
+    }
+
+    const [reqHour, reqMinute] = newStartTime.split(':').map(Number);
+    const [reqEndHour, reqEndMinute] = newEndTime.split(':').map(Number);
+    const reqStartMin = reqHour * 60 + reqMinute;
+    const reqEndMin = reqEndHour * 60 + reqEndMinute;
+
+    if (reqStartMin < startMin || reqEndMin > endMin) {
+      throw new BadRequestException('Slot is outside doctor\'s availability hours.');
+    }
+
+    // Step 5: Check overlap (ignoring this exact appointment)
+    const existing = await this.appointmentRepo.findOne({
+      where: {
+        doctorId: appointment.doctorId,
+        date: newDate,
+        startTime: newStartTime,
+        status: AppointmentStatus.BOOKED,
+      },
+    });
+
+    if (existing && existing.id !== appointment.id) {
+      throw new ConflictException('This slot is already booked.');
+    }
+
+    appointment.date = newDate;
+    appointment.startTime = newStartTime;
+    appointment.endTime = newEndTime;
+
+    return {
+      message: 'Appointment updated successfully',
+      appointment: await this.appointmentRepo.save(appointment),
+    };
+  }
+
+  // ─── 4. Cancel Appointment (PATIENT only) ────────────────────────────────────
+
+  async cancelAppointment(appointmentId: number, patientUserId: number) {
+    // Find the appointment by ID
     const appointment = await this.appointmentRepo.findOne({
       where: { id: appointmentId },
     });
-    if (!appointment) {
-      throw new NotFoundException(
-        `Appointment with ID ${appointmentId} not found.`,
-      );
-    }
 
-    // ── 2. Ownership check ──────────────────────────────────────────────────
-    if (appointment.patientId !== patientProfile.id) {
-      throw new ForbiddenException(
-        'You are not authorized to reschedule this appointment.',
-      );
-    }
-
-    // ── 3. Status check ─────────────────────────────────────────────────────
-    if (appointment.status === AppointmentStatus.CANCELLED) {
-      throw new BadRequestException(
-        'Cannot reschedule a cancelled appointment.',
-      );
-    }
-    if (appointment.status === AppointmentStatus.RESCHEDULED) {
-      throw new BadRequestException(
-        'This appointment has already been rescheduled. Please use the new appointment ID.',
-      );
-    }
-
-    // ── 4. 30-minute cutoff check ───────────────────────────────────────────
-    this.validateCutoffRule(appointment.appointmentDate, appointment.startTime);
-
-    // ── 5. Route by scheduling type ─────────────────────────────────────────
-    if (appointment.schedulingType === SchedulingType.STREAM) {
-      return this.rescheduleStreamAppointment(appointment, dto);
-    } else {
-      return this.rescheduleWaveAppointment(appointment, dto);
-    }
-  }
-
-  private async rescheduleStreamAppointment(
-    appointment: Appointment,
-    dto: RescheduleAppointmentDto,
-  ) {
-    if (!dto.newStreamSlotId) {
-      throw new BadRequestException(
-        'newStreamSlotId is required to reschedule a STREAM appointment.',
-      );
-    }
-
-    // ── Same slot check ─────────────────────────────────────────────────────
-    if (appointment.streamSlotId === dto.newStreamSlotId) {
-      throw new BadRequestException(
-        'New slot is the same as the current slot. Please choose a different time.',
-      );
-    }
-
-    // ── Validate new slot ───────────────────────────────────────────────────
-    const newSlot = await this.streamSlotRepo.findOne({
-      where: { id: dto.newStreamSlotId },
-    });
-
-    if (!newSlot) {
-      throw new NotFoundException(
-        `Stream slot with ID ${dto.newStreamSlotId} not found.`,
-      );
-    }
-    if (newSlot.doctorId !== appointment.doctorId) {
-      throw new BadRequestException(
-        'New slot must belong to the same doctor.',
-      );
-    }
-
-    if (!newSlot.isAvailable || newSlot.isBooked) {
-      const suggestion = await this.suggestNextStreamSlot(
-        appointment.doctorId,
-        newSlot.date,
-        newSlot.startTime,
-      );
-      throw new ConflictException({
-        message: newSlot.isBooked
-          ? 'Requested slot is already booked.'
-          : 'Requested slot is not available.',
-        suggestion,
-      });
-    }
-
-    this.validateFutureDateTime(newSlot.date, newSlot.startTime);
-
-    // ── Atomic transaction: release old, reserve new ────────────────────────
-    return this.dataSource.transaction(async (manager) => {
-      // Lock both slots
-      const lockedOldSlot = appointment.streamSlotId
-        ? await manager
-            .createQueryBuilder(StreamSlot, 'slot')
-            .setLock('pessimistic_write')
-            .where('slot.id = :id', { id: appointment.streamSlotId })
-            .getOne()
-        : null;
-
-      const lockedNewSlot = await manager
-        .createQueryBuilder(StreamSlot, 'slot')
-        .setLock('pessimistic_write')
-        .where('slot.id = :id', { id: dto.newStreamSlotId })
-        .getOne();
-
-      if (!lockedNewSlot || lockedNewSlot.isBooked || !lockedNewSlot.isAvailable) {
-        const suggestion = await this.suggestNextStreamSlot(
-          appointment.doctorId,
-          newSlot.date,
-          newSlot.startTime,
-        );
-        throw new ConflictException({
-          message: 'New slot was just taken by another patient.',
-          suggestion,
-        });
-      }
-
-      // Release old slot
-      if (lockedOldSlot) {
-        lockedOldSlot.isBooked = false;
-        await manager.save(StreamSlot, lockedOldSlot);
-      }
-
-      // Reserve new slot
-      lockedNewSlot.isBooked = true;
-      await manager.save(StreamSlot, lockedNewSlot);
-
-      // Update appointment record
-      appointment.streamSlotId = lockedNewSlot.id;
-      appointment.appointmentDate = lockedNewSlot.date;
-      appointment.startTime = lockedNewSlot.startTime;
-      appointment.endTime = lockedNewSlot.endTime;
-      appointment.status = AppointmentStatus.CONFIRMED;
-
-      const updated = await manager.save(Appointment, appointment);
-
-      return {
-        message: 'Appointment rescheduled successfully (Stream)',
-        appointment: updated,
-      };
-    });
-  }
-
-  private async rescheduleWaveAppointment(
-    appointment: Appointment,
-    dto: RescheduleAppointmentDto,
-  ) {
-    if (!dto.newWaveScheduleId) {
-      throw new BadRequestException(
-        'newWaveScheduleId is required to reschedule a WAVE appointment.',
-      );
-    }
-
-    // ── Same wave check ─────────────────────────────────────────────────────
-    if (appointment.waveScheduleId === dto.newWaveScheduleId) {
-      throw new BadRequestException(
-        'New wave is the same as the current wave. Please choose a different time.',
-      );
-    }
-
-    // ── Validate new wave ───────────────────────────────────────────────────
-    const newWave = await this.waveScheduleRepo.findOne({
-      where: { id: dto.newWaveScheduleId },
-    });
-
-    if (!newWave) {
-      throw new NotFoundException(
-        `Wave schedule with ID ${dto.newWaveScheduleId} not found.`,
-      );
-    }
-    if (newWave.doctorId !== appointment.doctorId) {
-      throw new BadRequestException(
-        'New wave must belong to the same doctor.',
-      );
-    }
-    if (newWave.bookedCount >= newWave.capacity) {
-      const suggestion = await this.suggestNextWaveSchedule(
-        appointment.doctorId,
-        newWave.date,
-      );
-      throw new ConflictException({
-        message: 'The requested wave is full.',
-        suggestion,
-      });
-    }
-
-    this.validateFutureDateTime(newWave.date, newWave.startTime);
-
-    // ── Atomic transaction: release old wave seat, reserve new ──────────────
-    return this.dataSource.transaction(async (manager) => {
-      // Lock old wave
-      const lockedOldWave = appointment.waveScheduleId
-        ? await manager
-            .createQueryBuilder(WaveSchedule, 'wave')
-            .setLock('pessimistic_write')
-            .where('wave.id = :id', { id: appointment.waveScheduleId })
-            .getOne()
-        : null;
-
-      // Lock new wave
-      const lockedNewWave = await manager
-        .createQueryBuilder(WaveSchedule, 'wave')
-        .setLock('pessimistic_write')
-        .where('wave.id = :id', { id: dto.newWaveScheduleId })
-        .getOne();
-
-      if (!lockedNewWave || lockedNewWave.bookedCount >= lockedNewWave.capacity) {
-        const suggestion = await this.suggestNextWaveSchedule(
-          appointment.doctorId,
-          newWave.date,
-        );
-        throw new ConflictException({
-          message: 'New wave just became full.',
-          suggestion,
-        });
-      }
-
-      // Release old wave seat
-      if (lockedOldWave && lockedOldWave.bookedCount > 0) {
-        lockedOldWave.bookedCount -= 1;
-        await manager.save(WaveSchedule, lockedOldWave);
-      }
-
-      // Reserve new wave seat and assign token
-      const newToken = lockedNewWave.bookedCount + 1;
-      lockedNewWave.bookedCount += 1;
-      await manager.save(WaveSchedule, lockedNewWave);
-
-      // Update appointment record
-      appointment.waveScheduleId = lockedNewWave.id;
-      appointment.waveToken = newToken;
-      appointment.appointmentDate = lockedNewWave.date;
-      appointment.startTime = lockedNewWave.startTime;
-      appointment.endTime = lockedNewWave.endTime;
-      appointment.status = AppointmentStatus.CONFIRMED;
-
-      const updated = await manager.save(Appointment, appointment);
-
-      return {
-        message: 'Appointment rescheduled successfully (Wave)',
-        appointment: updated,
-        newWaveToken: newToken,
-      };
-    });
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ─── Patient: Cancel Appointment ─────────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  async cancelAppointment(patientUserId: number, appointmentId: number) {
-    const patientProfile = await this.getPatientProfileByUserId(patientUserId);
-
-    const appointment = await this.appointmentRepo.findOne({
-      where: { id: appointmentId },
-    });
+    // Case 1: Appointment does not exist
     if (!appointment) {
       throw new NotFoundException(
         `Appointment with ID ${appointmentId} not found.`,
       );
     }
     if (appointment.patientId !== patientProfile.id) {
+
+    // Find patient profile to verify ownership
+    const patient = await this.patientRepo.findOne({
+      where: { userId: patientUserId },
+    });
+    if (!patient) {
+      throw new NotFoundException('Patient profile not found.');
+    }
+
+    // Case 2: Patient does not own this appointment
+    if (appointment.patientId !== patient.id) {
       throw new ForbiddenException(
         'You are not authorized to cancel this appointment.',
       );
