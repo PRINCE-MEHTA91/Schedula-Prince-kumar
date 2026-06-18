@@ -11,8 +11,10 @@ import { User } from './auth/user.entity';
 import { UsersModule } from './users/users.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
+import { AppointmentModule } from './appointment/appointment.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
+import { Appointment } from './appointment/entities/appointment.entity';
 import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
 import { Appointment } from './patient/entities/appointment.entity';
@@ -36,6 +38,8 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
       ssl: {
         rejectUnauthorized: false,
       },
+      entities: [User, DoctorProfile, PatientProfile, Appointment],
+      synchronize: false, // Use migrations instead of auto-sync
 <<entities: [
         User,
         DoctorProfile,
@@ -53,6 +57,7 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
     UsersModule,
     DoctorModule,
     PatientModule,
+    AppointmentModule,
   ],
   controllers: [AppController],
   providers: [
