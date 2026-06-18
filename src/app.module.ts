@@ -14,6 +14,9 @@ import { PatientModule } from './patient/patient.module';
 import { AppointmentModule } from './appointment/appointment.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
+import { DoctorSchedule } from './appointment/entities/doctor-schedule.entity';
+import { AppointmentSlot } from './appointment/entities/appointment-slot.entity';
+import { WaveBooking } from './appointment/entities/wave-booking.entity';
 import { Appointment } from './appointment/entities/appointment.entity';
 import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
@@ -38,6 +41,7 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
       ssl: {
         rejectUnauthorized: false,
       },
+      entities: [User, DoctorProfile, PatientProfile, DoctorSchedule, AppointmentSlot, WaveBooking],
       entities: [User, DoctorProfile, PatientProfile, Appointment],
       synchronize: false, // Use migrations instead of auto-sync
 <<entities: [
