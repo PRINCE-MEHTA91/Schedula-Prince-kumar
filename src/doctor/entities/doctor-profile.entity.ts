@@ -42,6 +42,9 @@ export class DoctorProfile {
   @Column({ default: true })
   isAvailable: boolean;
 
+  @Column({ type: 'int', default: 15 })
+  slotDuration: number; // in minutes
+
   @OneToOne(() => User, { eager: false })
   @JoinColumn({ name: 'userId' })
   user: User;

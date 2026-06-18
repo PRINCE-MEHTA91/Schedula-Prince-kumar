@@ -15,6 +15,16 @@ export class RecurringAvailability {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column()
+  doctorId: number;
+
+  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'doctorId' })
+  doctor: DoctorProfile;
+
+  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  @Column({ type: 'int' })
+  dayOfWeek: number;
   @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'doctorProfileId' })
   doctorProfile: DoctorProfile;

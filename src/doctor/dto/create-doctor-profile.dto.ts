@@ -4,7 +4,9 @@ import {
   IsNumber,
   IsPositive,
   IsOptional,
+  IsInt,
   Min,
+  Max,
 } from 'class-validator';
 
 export class CreateDoctorProfileDto {
@@ -36,4 +38,15 @@ export class CreateDoctorProfileDto {
   @IsString()
   @IsOptional()
   profileDetails?: string;
+
+  /**
+   * Slot duration in minutes. Options: 10, 15, 20, 30, 45, 60.
+   * Defaults to 15 if not provided.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(120)
+  slotDuration?: number;
 }
+

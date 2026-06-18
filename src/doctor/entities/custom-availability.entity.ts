@@ -14,6 +14,12 @@ export class CustomAvailability {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column()
+  doctorId: number;
+
+  @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'doctorId' })
+  doctor: DoctorProfile;
   @ManyToOne(() => DoctorProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'doctorProfileId' })
   doctorProfile: DoctorProfile;
@@ -25,6 +31,12 @@ export class CustomAvailability {
   date: string;
 
   @Column({ type: 'time', nullable: true })
+  startTime: string | null;
+
+  @Column({ type: 'time', nullable: true })
+  endTime: string | null;
+
+  @Column({ default: true })
   startTime: string;
 
   @Column({ type: 'time', nullable: true })
