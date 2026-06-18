@@ -17,6 +17,14 @@ import { PatientProfile } from './patient/entities/patient-profile.entity';
 import { DoctorSchedule } from './appointment/entities/doctor-schedule.entity';
 import { AppointmentSlot } from './appointment/entities/appointment-slot.entity';
 import { WaveBooking } from './appointment/entities/wave-booking.entity';
+import { Appointment } from './appointment/entities/appointment.entity';
+import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from './doctor/entities/custom-availability.entity';
+import { Appointment } from './patient/entities/appointment.entity';
+
+
+import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from './doctor/entities/custom-availability.entity';
 
 /**
  * Root application module.
@@ -34,7 +42,17 @@ import { WaveBooking } from './appointment/entities/wave-booking.entity';
         rejectUnauthorized: false,
       },
       entities: [User, DoctorProfile, PatientProfile, DoctorSchedule, AppointmentSlot, WaveBooking],
+      entities: [User, DoctorProfile, PatientProfile, Appointment],
       synchronize: false, // Use migrations instead of auto-sync
+<<entities: [
+        User,
+        DoctorProfile,
+        PatientProfile,
+        RecurringAvailability,
+        CustomAvailability,
+        Appointment,
+      ],
+      synchronize: false,
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
     }),
