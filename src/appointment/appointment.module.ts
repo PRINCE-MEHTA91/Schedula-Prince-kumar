@@ -2,18 +2,18 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppointmentController } from './appointment.controller';
 import { AppointmentService } from './appointment.service';
-import { DoctorSchedule } from './entities/doctor-schedule.entity';
-import { AppointmentSlot } from './entities/appointment-slot.entity';
-import { WaveBooking } from './entities/wave-booking.entity';
+import { Appointment } from './entities/appointment.entity';
+import { StreamSlot } from './entities/stream-slot.entity';
+import { WaveSchedule } from './entities/wave-schedule.entity';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.entity';
 import { PatientProfile } from '../patient/entities/patient-profile.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      DoctorSchedule,
-      AppointmentSlot,
-      WaveBooking,
+      Appointment,
+      StreamSlot,
+      WaveSchedule,
       DoctorProfile,
       PatientProfile,
     ]),
