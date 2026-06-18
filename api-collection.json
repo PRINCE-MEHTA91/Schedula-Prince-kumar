@@ -1,0 +1,305 @@
+{
+  "v": 2,
+  "name": "Schedula API Collection",
+  "folders": [
+    {
+      "id": "auth",
+      "name": "🔐 Auth",
+      "requests": [
+        {
+          "id": "signup",
+          "name": "Signup – Register New User",
+          "method": "POST",
+          "url": "{{baseUrl}}/auth/signup",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"name\": \"Dr. Priya Sharma\",\n  \"email\": \"priya@example.com\",\n  \"password\": \"securePass123\",\n  \"role\": \"DOCTOR\"\n}"
+          }
+        },
+        {
+          "id": "login",
+          "name": "Login – Get JWT Token",
+          "method": "POST",
+          "url": "{{baseUrl}}/auth/login",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"email\": \"priya@example.com\",\n  \"password\": \"securePass123\"\n}"
+          }
+        },
+        {
+          "id": "get-profile",
+          "name": "Get Auth Profile (me)",
+          "method": "GET",
+          "url": "{{baseUrl}}/auth/profile",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{token}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "doctor-profile",
+      "name": "👨‍⚕️ Doctor Profile",
+      "requests": [
+        {
+          "id": "create-doctor-profile",
+          "name": "Create Doctor Profile",
+          "method": "POST",
+          "url": "{{baseUrl}}/doctor/profile",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{token}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"fullName\": \"Dr. Priya Sharma\",\n  \"specialization\": \"Cardiology\",\n  \"experience\": 8,\n  \"qualification\": \"MBBS, MD\",\n  \"consultationFee\": 500,\n  \"availabilityHours\": \"Mon-Fri 10:00-18:00\",\n  \"slotDuration\": 15,\n  \"profileDetails\": \"Senior cardiologist with 8 years of experience\"\n}"
+          }
+        },
+        {
+          "id": "get-doctor-profile",
+          "name": "Get Own Doctor Profile",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor/profile",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{token}}" }
+          ]
+        },
+        {
+          "id": "update-doctor-profile",
+          "name": "Update Doctor Profile",
+          "method": "PATCH",
+          "url": "{{baseUrl}}/doctor/profile",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{token}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"consultationFee\": 600,\n  \"isAvailable\": true\n}"
+          }
+        },
+        {
+          "id": "list-doctors",
+          "name": "List All Doctors",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{token}}" }
+          ]
+        },
+        {
+          "id": "get-doctor-by-id",
+          "name": "Get Doctor by ID",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor/1",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{token}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "doctor-availability",
+      "name": "🗓️ Doctor Availability",
+      "requests": [
+        {
+          "id": "create-recurring",
+          "name": "Set Recurring Availability",
+          "method": "POST",
+          "url": "{{baseUrl}}/doctor/availability",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"dayOfWeek\": \"MONDAY\",\n  \"startTime\": \"10:00\",\n  \"endTime\": \"17:00\"\n}"
+          }
+        },
+        {
+          "id": "get-recurring",
+          "name": "Get Own Recurring Availability",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor/availability",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ]
+        },
+        {
+          "id": "update-recurring",
+          "name": "Update Recurring Availability Slot",
+          "method": "PATCH",
+          "url": "{{baseUrl}}/doctor/availability/1",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"startTime\": \"09:00\",\n  \"endTime\": \"16:00\"\n}"
+          }
+        },
+        {
+          "id": "delete-recurring",
+          "name": "Delete Recurring Availability Slot",
+          "method": "DELETE",
+          "url": "{{baseUrl}}/doctor/availability/1",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ]
+        },
+        {
+          "id": "custom-override",
+          "name": "Add Custom Date Override (Day Off)",
+          "method": "POST",
+          "url": "{{baseUrl}}/doctor/availability/override",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"date\": \"2026-07-04\",\n  \"isAvailable\": false\n}"
+          }
+        },
+        {
+          "id": "custom-override-available",
+          "name": "Add Custom Date Override (Special Hours)",
+          "method": "POST",
+          "url": "{{baseUrl}}/doctor/availability/override",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"date\": \"2026-07-05\",\n  \"isAvailable\": true,\n  \"startTime\": \"09:00\",\n  \"endTime\": \"13:00\"\n}"
+          }
+        },
+        {
+          "id": "get-availability-by-date",
+          "name": "Get Own Availability on a Date",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor/availability/date?date=2026-07-07",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ]
+        },
+        {
+          "id": "get-available-slots",
+          "name": "Get Available Slots for Doctor (Public)",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor/availability/1/slots?date=2026-07-07",
+          "headers": []
+        }
+      ]
+    },
+    {
+      "id": "patient-profile",
+      "name": "🧑‍💼 Patient Profile",
+      "requests": [
+        {
+          "id": "create-patient-profile",
+          "name": "Create Patient Profile",
+          "method": "POST",
+          "url": "{{baseUrl}}/patient/profile",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"fullName\": \"Ramesh Verma\",\n  \"age\": 35,\n  \"gender\": \"MALE\",\n  \"contactNumber\": \"9876543210\",\n  \"address\": \"123 MG Road, Mumbai\"\n}"
+          }
+        },
+        {
+          "id": "get-patient-profile",
+          "name": "Get Own Patient Profile",
+          "method": "GET",
+          "url": "{{baseUrl}}/patient/profile",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+          ]
+        },
+        {
+          "id": "update-patient-profile",
+          "name": "Update Patient Profile",
+          "method": "PATCH",
+          "url": "{{baseUrl}}/patient/profile",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"address\": \"456 New Colony, Delhi\"\n}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "appointments",
+      "name": "📅 Appointments",
+      "requests": [
+        {
+          "id": "book-appointment",
+          "name": "Book an Appointment",
+          "method": "POST",
+          "url": "{{baseUrl}}/appointments",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+          ],
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"doctorId\": 1,\n  \"date\": \"2026-07-10\",\n  \"startTime\": \"10:00\"\n}"
+          }
+        },
+        {
+          "id": "get-my-appointments",
+          "name": "Get My Appointments",
+          "method": "GET",
+          "url": "{{baseUrl}}/appointments/my",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+          ]
+        },
+        {
+          "id": "cancel-appointment",
+          "name": "Cancel an Appointment",
+          "method": "DELETE",
+          "url": "{{baseUrl}}/appointments/1",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+          ]
+        }
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "name": "Local Development",
+      "variables": {
+        "baseUrl": "http://localhost:3000",
+        "token": "<your-jwt-token>",
+        "doctorToken": "<doctor-jwt-token>",
+        "patientToken": "<patient-jwt-token>"
+      }
+    },
+    {
+      "name": "Production",
+      "variables": {
+        "baseUrl": "https://schedula-prince-kumar.onrender.com",
+        "token": "<your-jwt-token>",
+        "doctorToken": "<doctor-jwt-token>",
+        "patientToken": "<patient-jwt-token>"
+      }
+    }
+  ]
+}
