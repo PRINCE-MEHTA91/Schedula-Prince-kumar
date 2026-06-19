@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Appointment } from './entities/appointment.entity';
+import { Appointment, AppointmentStatus } from '../appointment/entities/appointment.entity';
 import { PatientProfile } from './entities/patient-profile.entity';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.entity';
 import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
@@ -101,7 +101,7 @@ export class AppointmentService {
         doctorId: dto.doctorId,
         date: dto.date,
         startTime,
-        status: 'BOOKED',
+        status: AppointmentStatus.CONFIRMED,
       },
     });
     if (conflict) {
@@ -124,7 +124,7 @@ export class AppointmentService {
     appointment.date      = dto.date;
     appointment.startTime = startTime;
     appointment.endTime   = endTime;
-    appointment.status    = 'BOOKED';
+    appointment.status    = AppointmentStatus.CONFIRMED;
 
     const saved = await this.appointmentRepo.save(appointment);
 
@@ -165,11 +165,11 @@ export class AppointmentService {
       throw new BadRequestException('Appointment is already cancelled.');
     }
 
-    if (appointment.status === 'COMPLETED') {
+    if ((appointment.status as string) === 'COMPLETED') {
       throw new BadRequestException('Cannot cancel a completed appointment.');
     }
 
-    appointment.status = 'CANCELLED';
+    appointment.status = AppointmentStatus.CANCELLED;
     await this.appointmentRepo.save(appointment);
 
     return { message: 'Appointment cancelled successfully', appointmentId };

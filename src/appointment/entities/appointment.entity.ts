@@ -10,10 +10,12 @@ import {
 import { DoctorProfile } from '../../doctor/entities/doctor-profile.entity';
 import { PatientProfile } from '../../patient/entities/patient-profile.entity';
 
-// Status of the appointment — BOOKED or CANCELLED
+// Matches the actual DB enum: appointments_status_enum
 export enum AppointmentStatus {
-  BOOKED = 'BOOKED',
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
+  RESCHEDULED = 'RESCHEDULED',
 }
 
 @Entity('appointments')
@@ -37,8 +39,8 @@ export class Appointment {
   @Column()
   patientId: number;
 
-  // Date of appointment e.g. "2026-06-20"
-  @Column()
+  // Date of appointment e.g. "2026-06-20" — maps to DB column "appointmentDate"
+  @Column({ name: 'appointmentDate' })
   date: string;
 
   // Start time e.g. "10:00"
@@ -49,11 +51,19 @@ export class Appointment {
   @Column()
   endTime: string;
 
-  // Status — default is BOOKED when created
+  // Scheduling type — STREAM or WAVE (nullable for backwards compat)
+  @Column({ nullable: true })
+  schedulingType: string;
+
+  // Optional notes
+  @Column({ nullable: true })
+  notes: string;
+
+  // Status — matches real DB enum
   @Column({
     type: 'enum',
     enum: AppointmentStatus,
-    default: AppointmentStatus.BOOKED,
+    default: AppointmentStatus.CONFIRMED,
   })
   status: AppointmentStatus;
 

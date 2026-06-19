@@ -87,7 +87,7 @@ export class AppointmentService {
         doctorId: dto.doctorId,
         date: dto.date,
         startTime: dto.startTime,
-        status: AppointmentStatus.BOOKED,
+        status: AppointmentStatus.CONFIRMED,
       },
     });
     if (existing) {
@@ -103,7 +103,7 @@ export class AppointmentService {
       date: dto.date,
       startTime: dto.startTime,
       endTime: dto.endTime,
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     });
 
     const saved = await this.appointmentRepo.save(appointment);
@@ -209,7 +209,7 @@ export class AppointmentService {
         doctorId: appointment.doctorId,
         date: newDate,
         startTime: newStartTime,
-        status: AppointmentStatus.BOOKED,
+        status: AppointmentStatus.CONFIRMED,
       },
     });
 
@@ -284,7 +284,7 @@ export class AppointmentService {
 
   // ─── 5. Doctor's Appointment View (DOCTOR only) ──────────────────────────────
 
-  async getDoctorAppointments(doctorUserId: number) {
+  async getDoctorAppointments(doctorUserId: number, date?: string) {
     // Find doctor profile by userId
     const doctor = await this.doctorRepo.findOne({
       where: { userId: doctorUserId },
@@ -295,9 +295,23 @@ export class AppointmentService {
       );
     }
 
+    // Build where clause — exclude CANCELLED; show CONFIRMED, PENDING, RESCHEDULED
+    const where: any = { 
+      doctorId: doctor.id,
+      status: AppointmentStatus.CONFIRMED,
+    };
+    if (date) {
+      // Basic date format validation check, assuming date is YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new BadRequestException('Invalid date format. Use YYYY-MM-DD.');
+      }
+      // 'date' property maps to 'appointmentDate' column via @Column({ name: 'appointmentDate' })
+      where.date = date;
+    }
+
     // Get all appointments for this doctor with patient info
     const appointments = await this.appointmentRepo.find({
-      where: { doctorId: doctor.id },
+      where,
       relations: { patient: true }, // brings in PatientProfile data
       order: { date: 'ASC', startTime: 'ASC' },
     });
@@ -316,18 +330,59 @@ export class AppointmentService {
       startTime: appt.startTime,
       endTime: appt.endTime,
       status: appt.status,
-      patient: {
+      schedulingType: 'STREAM', // Defaulting to STREAM
+      patient: appt.patient ? {
         id: appt.patient.id,
         fullName: appt.patient.fullName,
         age: appt.patient.age,
         gender: appt.patient.gender,
         contactDetails: appt.patient.contactDetails,
-      },
+      } : null,
     }));
 
     return {
       message: 'Appointments fetched successfully',
       appointments: result,
+    };
+  }
+
+  // ─── 6. Cancel Appointment By Doctor (DOCTOR only) ───────────────────────────
+
+  async cancelAppointmentByDoctor(appointmentId: number, doctorUserId: number) {
+    // Find the appointment by ID
+    const appointment = await this.appointmentRepo.findOne({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException(`Appointment with ID ${appointmentId} not found.`);
+    }
+
+    // Find doctor profile to verify ownership
+    const doctor = await this.doctorRepo.findOne({
+      where: { userId: doctorUserId },
+    });
+    if (!doctor) {
+      throw new NotFoundException('Doctor profile not found. Please complete your profile first.');
+    }
+
+    // Case 2: Doctor does not own this appointment
+    if (appointment.doctorId !== doctor.id) {
+      throw new ForbiddenException('You are not authorized to cancel this appointment.');
+    }
+
+    // Case 3: Already cancelled
+    if (appointment.status === AppointmentStatus.CANCELLED) {
+      throw new BadRequestException('This appointment is already cancelled.');
+    }
+
+    // All good — mark as cancelled
+    appointment.status = AppointmentStatus.CANCELLED;
+    const updated = await this.appointmentRepo.save(appointment);
+
+    return {
+      message: 'Appointment cancelled successfully',
+      appointment: updated,
     };
   }
 
@@ -381,7 +436,7 @@ export class AppointmentService {
       where: {
         doctorId,
         date,
-        status: AppointmentStatus.BOOKED,
+        status: AppointmentStatus.CONFIRMED,
       },
       select: { startTime: true, endTime: true },
     });
