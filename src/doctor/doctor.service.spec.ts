@@ -36,11 +36,14 @@ function makeDoctor(overrides: Partial<DoctorProfile> = {}): DoctorProfile {
     consultationFee: 500,
     availabilityHours: '9am - 5pm',
     isAvailable: true,
+    slotDuration: 15,
     profileDetails: 'Heart diseases specialist',
     userId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
     user: null as any,
+    recurringAvailabilities: [],
+    customAvailabilities: [],
     ...overrides,
   };
 }
