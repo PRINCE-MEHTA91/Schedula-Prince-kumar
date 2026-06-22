@@ -72,4 +72,3 @@ export class AppointmentController {
     return this.appointmentService.cancelAppointment(id, patientUserId);
   }
 }
-
