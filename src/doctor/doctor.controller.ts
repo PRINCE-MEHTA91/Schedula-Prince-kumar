@@ -10,6 +10,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { DoctorService } from './doctor.service';
+import { AppointmentService } from '../appointment/appointment.service';
 import { CreateDoctorProfileDto } from './dto/create-doctor-profile.dto';
 import { UpdateDoctorProfileDto } from './dto/update-doctor-profile.dto';
 import { GetDoctorsQueryDto } from './dto/get-doctors-query.dto';
@@ -21,6 +22,7 @@ import { Role } from '../auth/role.enum';
 export class DoctorController {
   constructor(
     private readonly doctorService: DoctorService,
+    private readonly appointmentService: AppointmentService,
   ) {}
 
   // ─── Doctor Discovery (public) ─────────────────────────────────────────────

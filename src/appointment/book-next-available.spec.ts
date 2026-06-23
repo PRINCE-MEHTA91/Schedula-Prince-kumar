@@ -168,7 +168,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
       date,
       startTime: '09:00',
       endTime: '09:30',
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     };
 
     doctorRepo.findOne.mockResolvedValue({ ...baseDoctor });
@@ -198,7 +198,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
       date,
       startTime: '09:00',
       endTime: '09:30',
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     };
 
     doctorRepo.findOne.mockResolvedValue({ ...baseDoctor });
@@ -234,7 +234,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
       date,
       startTime: '14:00',
       endTime: '15:00',
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     };
 
     doctorRepo.findOne.mockResolvedValue({ ...baseDoctor });
@@ -294,7 +294,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
       date,
       startTime: '10:00',
       endTime: '10:30',
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     };
 
     doctorRepo.findOne.mockResolvedValue({ ...baseDoctor });
@@ -311,7 +311,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
     );
 
     expect(result.schedulingType).toBe('SLOT');
-    expect(result.appointment.status).toBe(AppointmentStatus.BOOKED);
+    expect(result.appointment.status).toBe(AppointmentStatus.CONFIRMED);
   });
 
   // ─── Scenario 10: Legacy SLOT taken → ConflictException ───────────────────
@@ -328,7 +328,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
       doctorId: 1,
       date,
       startTime: '10:00',
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     });
 
     await expect(
@@ -358,7 +358,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
       date,
       startTime: '16:00',
       endTime: '17:00',
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     };
 
     doctorRepo.findOne.mockResolvedValue({ ...baseDoctor });

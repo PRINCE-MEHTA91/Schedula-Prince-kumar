@@ -655,7 +655,7 @@ export class AppointmentService {
 
       // Remove already-booked slots
       const bookedOnDay = await this.appointmentRepo.find({
-        where: { doctorId, date: dateStr, status: AppointmentStatus.BOOKED },
+        where: { doctorId, date: dateStr, status: AppointmentStatus.CONFIRMED },
         select: { startTime: true, endTime: true },
       });
 
@@ -762,7 +762,7 @@ export class AppointmentService {
         date: dto.date,
         startTime: dto.startTime,
         endTime: dto.endTime,
-        status: AppointmentStatus.BOOKED,
+        status: AppointmentStatus.CONFIRMED,
       });
       const saved = await this.appointmentRepo.save(appointment);
 
@@ -801,7 +801,7 @@ export class AppointmentService {
         date: dto.date,
         startTime: dto.startTime,
         endTime: dto.endTime,
-        status: AppointmentStatus.BOOKED,
+        status: AppointmentStatus.CONFIRMED,
       });
       const saved = await this.appointmentRepo.save(appointment);
 
@@ -820,7 +820,7 @@ export class AppointmentService {
         doctorId: dto.doctorId,
         date: dto.date,
         startTime: dto.startTime,
-        status: AppointmentStatus.BOOKED,
+        status: AppointmentStatus.CONFIRMED,
       },
     });
     if (existing) {
@@ -835,7 +835,7 @@ export class AppointmentService {
       date: dto.date,
       startTime: dto.startTime,
       endTime: dto.endTime,
-      status: AppointmentStatus.BOOKED,
+      status: AppointmentStatus.CONFIRMED,
     });
     const saved = await this.appointmentRepo.save(appointment);
 

@@ -4,6 +4,10 @@ import { AppointmentService } from './appointment.service';
 import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.entity';
 import { PatientProfile, Gender } from '../patient/entities/patient-profile.entity';
+import { StreamSlot } from './entities/stream-slot.entity';
+import { WaveSchedule } from './entities/wave-schedule.entity';
+import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
 describe('AppointmentService', () => {
@@ -30,6 +34,10 @@ describe('AppointmentService', () => {
         { provide: getRepositoryToken(Appointment), useValue: mockAppointmentRepo },
         { provide: getRepositoryToken(DoctorProfile), useValue: mockDoctorRepo },
         { provide: getRepositoryToken(PatientProfile), useValue: mockPatientRepo },
+        { provide: getRepositoryToken(StreamSlot), useValue: { findOne: jest.fn(), find: jest.fn(), save: jest.fn() } },
+        { provide: getRepositoryToken(WaveSchedule), useValue: { findOne: jest.fn(), find: jest.fn(), save: jest.fn() } },
+        { provide: getRepositoryToken(RecurringAvailability), useValue: { find: jest.fn() } },
+        { provide: getRepositoryToken(CustomAvailability), useValue: { find: jest.fn() } },
       ],
     }).compile();
 
