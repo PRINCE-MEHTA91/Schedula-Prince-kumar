@@ -248,7 +248,7 @@ export class AvailabilityService {
     allSlots = allSlots.filter((slot) => slot.start > now);
 
     const appointments = await this.appointmentRepo.find({
-      where: { doctorId, date: dateString, status: 'BOOKED' as any },
+      where: { doctorId, date: dateString, status: AppointmentStatus.BOOKED },
     });
 
     const availableSlots = allSlots.filter((slot) => {
