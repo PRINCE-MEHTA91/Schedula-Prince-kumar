@@ -278,6 +278,24 @@
           "headers": [
             { "key": "Authorization", "value": "Bearer {{patientToken}}" }
           ]
+        },
+        {
+          "id": "get-doctor-appointments",
+          "name": "Get Doctor Appointments",
+          "method": "GET",
+          "url": "{{baseUrl}}/doctor/appointments?date=2026-06-25",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ]
+        },
+        {
+          "id": "cancel-doctor-appointment",
+          "name": "Cancel Appointment by Doctor",
+          "method": "PATCH",
+          "url": "{{baseUrl}}/doctor/appointments/1/cancel",
+          "headers": [
+            { "key": "Authorization", "value": "Bearer {{doctorToken}}" }
+          ]
         }
       ]
     }

@@ -13,6 +13,7 @@ import { DoctorService } from './doctor.service';
 import { CreateDoctorProfileDto } from './dto/create-doctor-profile.dto';
 import { UpdateDoctorProfileDto } from './dto/update-doctor-profile.dto';
 import { GetDoctorsQueryDto } from './dto/get-doctors-query.dto';
+import { GetDoctorAppointmentsQueryDto } from './dto/get-doctor-appointments-query.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 
@@ -58,6 +59,33 @@ export class DoctorController {
       availabilityHours: profile.availabilityHours,
     };
   }
+
+  /**
+   * GET /doctor/appointments — Doctor's assigned appointments
+   */
+  @Get('appointments')
+  @Roles(Role.DOCTOR)
+  async getDoctorAppointments(
+    @Request() req: any,
+    @Query() query: GetDoctorAppointmentsQueryDto,
+  ) {
+    const userId: number = req.user.id;
+    return this.appointmentService.getDoctorAppointments(userId, query.date);
+  }
+
+  /**
+   * PATCH /doctor/appointments/:id/cancel — Doctor cancels an appointment
+   */
+  @Patch('appointments/:id/cancel')
+  @Roles(Role.DOCTOR)
+  async cancelDoctorAppointment(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    const userId: number = req.user.id;
+    return this.appointmentService.cancelAppointmentByDoctor(id, userId);
+  }
+
 
   /**
    * GET /doctor/:id — Public: get any doctor by ID
