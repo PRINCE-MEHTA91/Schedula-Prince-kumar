@@ -15,6 +15,7 @@ import { WaveSchedule } from './entities/wave-schedule.entity';
 import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
 import { BookAppointmentDto } from './dto/book-appointment.dto';
+import { BookNextAvailableDto } from './dto/book-next-available.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { DayOfWeek } from '../doctor/enums/day-of-week.enum';
 
@@ -627,6 +628,166 @@ export class AppointmentService {
       schedulingType: null,
       availableSlots: [],
       availableWaves: [],
+      searchWindowDays: MAX_SEARCH_DAYS,
+    };
+  }
+
+  // ─── 8. Book Next Available Appointment (PATIENT only) ───────────────────────
+
+  /**
+   * Confirms a booking on the next-available slot that was surfaced by
+   * findNextAvailable().  The patient selects a slot from that response and
+   * submits it here to finalise the appointment.
+   *
+   * Business rules enforced:
+   *  - Doctor must still exist and be available
+   *  - Requested date must still be in the future
+   *  - For STREAM: the specific StreamSlot must still be free (isBooked=false)
+   *  - For WAVE:   the WaveSchedule must still have remaining capacity
+   *  - Falls back to the legacy slot path when neither StreamSlot nor
+   *    WaveSchedule records exist for the given day
+   */
+  async bookNextAvailableSlot(
+    patientUserId: number,
+    dto: BookNextAvailableDto,
+  ) {
+    // ── Validate doctor ──────────────────────────────────────────────────────
+    if (!dto.doctorId || isNaN(dto.doctorId) || dto.doctorId <= 0) {
+      throw new BadRequestException('Invalid doctor ID provided.');
+    }
+
+    const doctor = await this.doctorRepo.findOne({ where: { id: dto.doctorId } });
+    if (!doctor) {
+      throw new NotFoundException(`Doctor with ID ${dto.doctorId} not found.`);
+    }
+    if (!doctor.isAvailable) {
+      throw new BadRequestException(
+        'Doctor is currently not accepting appointments.',
+      );
+    }
+
+    // ── Validate patient profile ─────────────────────────────────────────────
+    const patient = await this.patientRepo.findOne({
+      where: { userId: patientUserId },
+    });
+    if (!patient) {
+      throw new NotFoundException(
+        'Patient profile not found. Please complete your profile first.',
+      );
+    }
+
+    // ── Validate future date/time ────────────────────────────────────────────
+    const appointmentDateTime = new Date(`${dto.date}T${dto.startTime}:00`);
+    if (appointmentDateTime <= new Date()) {
+      throw new BadRequestException(
+        'The selected appointment slot is in the past. Please search again.',
+      );
+    }
+
+    // ── Try to lock a Stream slot first ─────────────────────────────────────
+    const streamSlot = await this.streamSlotRepo.findOne({
+      where: {
+        doctorId: dto.doctorId,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        isAvailable: true,
+        isBooked: false,
+      },
+    });
+
+    if (streamSlot) {
+      // Mark slot as booked
+      streamSlot.isBooked = true;
+      await this.streamSlotRepo.save(streamSlot);
+
+      const appointment = this.appointmentRepo.create({
+        doctorId: dto.doctorId,
+        patientId: patient.id,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        status: AppointmentStatus.BOOKED,
+      });
+      const saved = await this.appointmentRepo.save(appointment);
+
+      return {
+        message: 'Appointment booked successfully via next-available (STREAM)',
+        schedulingType: 'STREAM',
+        appointment: saved,
+      };
+    }
+
+    // ── Try Wave schedule ────────────────────────────────────────────────────
+    const waveQuery: Partial<WaveSchedule> = {
+      doctorId: dto.doctorId,
+      date: dto.date,
+      startTime: dto.startTime,
+    };
+    if (dto.waveId) {
+      waveQuery.id = dto.waveId;
+    }
+
+    const wave = await this.waveScheduleRepo.findOne({ where: waveQuery });
+
+    if (wave) {
+      if (wave.bookedCount >= wave.capacity) {
+        throw new ConflictException(
+          'This wave is now fully booked. Please search again for next available.',
+        );
+      }
+
+      wave.bookedCount += 1;
+      await this.waveScheduleRepo.save(wave);
+
+      const appointment = this.appointmentRepo.create({
+        doctorId: dto.doctorId,
+        patientId: patient.id,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        status: AppointmentStatus.BOOKED,
+      });
+      const saved = await this.appointmentRepo.save(appointment);
+
+      return {
+        message: 'Appointment booked successfully via next-available (WAVE)',
+        schedulingType: 'WAVE',
+        waveToken: wave.bookedCount, // sequential token number for the patient
+        appointment: saved,
+      };
+    }
+
+    // ── Legacy slot fallback (no StreamSlot / WaveSchedule records) ──────────
+    // Verify slot isn't already taken
+    const existing = await this.appointmentRepo.findOne({
+      where: {
+        doctorId: dto.doctorId,
+        date: dto.date,
+        startTime: dto.startTime,
+        status: AppointmentStatus.BOOKED,
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `Slot ${dto.startTime} on ${dto.date} was just taken. Please search again.`,
+      );
+    }
+
+    const appointment = this.appointmentRepo.create({
+      doctorId: dto.doctorId,
+      patientId: patient.id,
+      date: dto.date,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      status: AppointmentStatus.BOOKED,
+    });
+    const saved = await this.appointmentRepo.save(appointment);
+
+    return {
+      message: 'Appointment booked successfully via next-available (SLOT)',
+      schedulingType: 'SLOT',
+      appointment: saved,
     };
   }
 
