@@ -12,11 +12,13 @@ import { UsersModule } from './users/users.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
 import { AppointmentModule } from './appointment/appointment.module';
+import { NotificationModule } from './notification/notification.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
 import { Appointment } from './appointment/entities/appointment.entity';
 import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
+import { Notification } from './notification/entities/notification.entity';
 
 /**
  * Root application module.
@@ -40,6 +42,7 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
         Appointment,
         RecurringAvailability,
         CustomAvailability,
+        Notification,
       ],
       synchronize: false, // Use migrations instead of auto-sync
       migrations: ['dist/migrations/*{.ts,.js}'],
@@ -51,6 +54,7 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
     DoctorModule,
     PatientModule,
     AppointmentModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [
