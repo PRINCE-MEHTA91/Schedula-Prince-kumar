@@ -13,16 +13,17 @@ import { DoctorService } from './doctor.service';
 import { CreateDoctorProfileDto } from './dto/create-doctor-profile.dto';
 import { UpdateDoctorProfileDto } from './dto/update-doctor-profile.dto';
 import { GetDoctorsQueryDto } from './dto/get-doctors-query.dto';
+import { AppointmentService } from '../appointment/appointment.service';
 import { GetDoctorAppointmentsQueryDto } from './dto/get-doctor-appointments-query.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 
 @Controller('doctor')
 export class DoctorController {
-  constructor(
-    private readonly doctorService: DoctorService,
-  ) {}
-
+ constructor(
+  private readonly doctorService: DoctorService,
+  private readonly appointmentService: AppointmentService,
+) {}
   // ─── Doctor Discovery (public) ─────────────────────────────────────────────
 
   /**
