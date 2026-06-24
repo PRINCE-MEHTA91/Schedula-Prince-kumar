@@ -39,6 +39,8 @@ function makeDoctor(overrides: Partial<DoctorProfile> = {}): DoctorProfile {
     slotDuration: 15,
     profileDetails: 'Heart diseases specialist',
     userId: 1,
+    recurringAvailabilities: [],
+    customAvailabilities: [],
     createdAt: new Date(),
     updatedAt: new Date(),
     user: null as any,
