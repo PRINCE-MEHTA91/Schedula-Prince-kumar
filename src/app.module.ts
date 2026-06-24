@@ -19,6 +19,8 @@ import { Appointment } from './appointment/entities/appointment.entity';
 import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
 import { Notification } from './notification/entities/notification.entity';
+import { StreamSlot } from './appointment/entities/stream-slot.entity';
+import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
 
 /**
  * Root application module.
@@ -43,6 +45,8 @@ import { Notification } from './notification/entities/notification.entity';
         RecurringAvailability,
         CustomAvailability,
         Notification,
+        StreamSlot,
+        WaveSchedule,
       ],
       synchronize: false, // Use migrations instead of auto-sync
       migrations: ['dist/migrations/*{.ts,.js}'],

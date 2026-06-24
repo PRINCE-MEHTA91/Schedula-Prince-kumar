@@ -293,7 +293,7 @@ The full API collection is included in this repository:
 
 | Environment | URL |
 |-------------|-----|
-| **Production** | *(Render.com – deploy in progress)* |
+| **Production** |  |
 | **Local Dev** | `http://localhost:3000` |
 
 > Health check: `GET /` → `{ "message": "Schedula API is running and healthy!" }`

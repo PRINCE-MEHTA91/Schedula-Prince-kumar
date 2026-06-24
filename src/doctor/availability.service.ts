@@ -9,7 +9,7 @@ import { Repository } from 'typeorm';
 import { DoctorProfile } from './entities/doctor-profile.entity';
 import { RecurringAvailability } from './entities/recurring-availability.entity';
 import { CustomAvailability } from './entities/custom-availability.entity';
-import { Appointment } from '../patient/entities/appointment.entity';
+import { Appointment } from '../appointment/entities/appointment.entity';
 import { CreateRecurringAvailabilityDto } from './dto/create-recurring-availability.dto';
 import { UpdateRecurringAvailabilityDto } from './dto/update-recurring-availability.dto';
 import { CreateCustomAvailabilityDto } from './dto/create-custom-availability.dto';
@@ -248,7 +248,7 @@ export class AvailabilityService {
     allSlots = allSlots.filter((slot) => slot.start > now);
 
     const appointments = await this.appointmentRepo.find({
-      where: { doctorId, date: dateString, status: 'BOOKED' as any },
+      where: { doctorId, date: dateString, status: AppointmentStatus.BOOKED },
     });
 
     const availableSlots = allSlots.filter((slot) => {

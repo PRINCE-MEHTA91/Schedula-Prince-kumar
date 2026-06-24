@@ -44,6 +44,8 @@ function makeDoctor(overrides: Partial<DoctorProfile> = {}): DoctorProfile {
     createdAt: new Date(),
     updatedAt: new Date(),
     user: null as any,
+    recurringAvailabilities: [],
+    customAvailabilities: [],
     ...overrides,
   };
 }
