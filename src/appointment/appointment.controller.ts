@@ -19,7 +19,7 @@ import { Public } from '../auth/public.decorator';
 
 @Controller('appointment')
 export class AppointmentController {
-  constructor(private readonly appointmentService: AppointmentService) { }
+  constructor(private readonly appointmentService: AppointmentService) {}
 
   // GET /appointment/next-available?doctorId=3
   // Public — any authenticated or anonymous user can check availability
@@ -46,10 +46,7 @@ export class AppointmentController {
   // POST /appointment — Book a new appointment (PATIENT only)
   @Post()
   @Roles(Role.PATIENT)
-  async bookAppointment(
-    @Request() req: any,
-    @Body() dto: BookAppointmentDto,
-  ) {
+  async bookAppointment(@Request() req: any, @Body() dto: BookAppointmentDto) {
     const patientUserId: number = req.user.id;
     return this.appointmentService.bookAppointment(patientUserId, dto);
   }
@@ -71,7 +68,11 @@ export class AppointmentController {
     @Body() dto: UpdateAppointmentDto,
   ) {
     const patientUserId: number = req.user.id;
-    return this.appointmentService.rescheduleAppointment(id, patientUserId, dto);
+    return this.appointmentService.rescheduleAppointment(
+      id,
+      patientUserId,
+      dto,
+    );
   }
 
   // PATCH /appointment/:id/cancel — Patient cancels their appointment (PATIENT only)
@@ -83,5 +84,36 @@ export class AppointmentController {
   ) {
     const patientUserId: number = req.user.id;
     return this.appointmentService.cancelAppointment(id, patientUserId);
+  }
+
+  // GET /appointment/available-slots — Get available slots for a doctor on a specific date
+  @Get('available-slots')
+  @Roles(Role.PATIENT)
+  async getAvailableSlots(
+    @Query('doctorId', ParseIntPipe) doctorId: number,
+    @Query('date') date: string,
+  ) {
+    try {
+      return await this.appointmentService.getAvailableSlots(doctorId, date);
+    } catch (error) {
+      console.error(error);
+      return { statusCode: 500, message: error.message, stack: error.stack };
+    }
+  }
+  // GET /appointment/next-available — Get the next available slot for a doctor
+  @Get('next-available')
+  @Roles(Role.PATIENT)
+  async getNextAvailableSlots(
+    @Query('doctorId', ParseIntPipe) doctorId: number,
+    @Query('date') date: string,
+  ) {
+    try {
+      // Use today's date if date is not provided
+      const startDate = date || new Date().toISOString().split('T')[0];
+      return await this.appointmentService.getNextAvailableSlots(doctorId, startDate);
+    } catch (error) {
+      console.error(error);
+      return { statusCode: 500, message: error.message, stack: error.stack };
+    }
   }
 }

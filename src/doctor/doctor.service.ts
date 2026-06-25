@@ -94,7 +94,7 @@ export class DoctorService {
     const skip = (page - 1) * limit;
 
     // ── Build where clause ─────────────────────────────────────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const where: Record<string, any> = {};
 
     if (specialization && specialization.trim() !== '') {
@@ -210,7 +210,7 @@ export class DoctorService {
     availability?: string;
   }) {
     // Convert old string-based query to typed DTO
-    let page = parseInt(query.page ?? '1', 10);
+    const page = parseInt(query.page ?? '1', 10);
     let limit = parseInt(query.limit ?? '10', 10);
 
     if (isNaN(page) || page < 1) {
@@ -227,7 +227,6 @@ export class DoctorService {
 
     const skip = (page - 1) * limit;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = {};
 
     if (query.specialization && query.specialization.trim() !== '') {

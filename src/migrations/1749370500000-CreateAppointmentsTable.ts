@@ -2,9 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // Creates the appointments table
 // Unique constraint on (doctorId, date, startTime) prevents double booking
-export class CreateAppointmentsTable1749370500000
-  implements MigrationInterface
-{
+export class CreateAppointmentsTable1749370500000 implements MigrationInterface {
   name = 'CreateAppointmentsTable1749370500000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

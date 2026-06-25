@@ -36,13 +36,19 @@ export class AppointmentService {
   // ── Book Appointment ────────────────────────────────────────────────────────
   async bookAppointment(userId: number, dto: BookAppointmentDto) {
     // 1. Patient must have a profile
-    const patient = await this.patientProfileRepo.findOne({ where: { userId } });
+    const patient = await this.patientProfileRepo.findOne({
+      where: { userId },
+    });
     if (!patient) {
-      throw new NotFoundException('Patient profile not found. Please create your profile first.');
+      throw new NotFoundException(
+        'Patient profile not found. Please create your profile first.',
+      );
     }
 
     // 2. Doctor must exist
-    const doctor = await this.doctorProfileRepo.findOne({ where: { id: dto.doctorId } });
+    const doctor = await this.doctorProfileRepo.findOne({
+      where: { id: dto.doctorId },
+    });
     if (!doctor) {
       throw new NotFoundException(`Doctor with ID ${dto.doctorId} not found.`);
     }
@@ -76,7 +82,9 @@ export class AppointmentService {
         (c) => c.isAvailable && c.startTime && c.endTime,
       );
       isValidSlot = available.some(
-        (c) => dto.startTime + ':00' >= (c.startTime as string) && endTime <= (c.endTime as string),
+        (c) =>
+          dto.startTime + ':00' >= (c.startTime as string) &&
+          endTime <= (c.endTime as string),
       );
     } else {
       // Use recurring availability
@@ -114,14 +122,16 @@ export class AppointmentService {
     const now = new Date();
     const slotDateTime = new Date(`${dto.date}T${dto.startTime}:00`);
     if (slotDateTime <= now) {
-      throw new BadRequestException('Cannot book a slot that has already passed.');
+      throw new BadRequestException(
+        'Cannot book a slot that has already passed.',
+      );
     }
 
     // 7. Create appointment
     const appointment = new Appointment();
-    appointment.doctorId  = dto.doctorId;
+    appointment.doctorId = dto.doctorId;
     appointment.patientId = patient.id;
-    appointment.date      = dto.date;
+    appointment.date = dto.date;
     appointment.startTime = startTime;
     appointment.endTime   = endTime;
     appointment.status    = AppointmentStatus.CONFIRMED;
@@ -131,20 +141,22 @@ export class AppointmentService {
     return {
       message: 'Appointment booked successfully',
       appointment: {
-        id        : saved.id,
-        doctorId  : saved.doctorId,
-        patientId : saved.patientId,
-        date      : saved.date,
-        startTime : saved.startTime.substring(0, 5),
-        endTime   : saved.endTime.substring(0, 5),
-        status    : saved.status,
+        id: saved.id,
+        doctorId: saved.doctorId,
+        patientId: saved.patientId,
+        date: saved.date,
+        startTime: saved.startTime.substring(0, 5),
+        endTime: saved.endTime.substring(0, 5),
+        status: saved.status,
       },
     };
   }
 
   // ── Cancel Appointment ──────────────────────────────────────────────────────
   async cancelAppointment(userId: number, appointmentId: number) {
-    const patient = await this.patientProfileRepo.findOne({ where: { userId } });
+    const patient = await this.patientProfileRepo.findOne({
+      where: { userId },
+    });
     if (!patient) {
       throw new NotFoundException('Patient profile not found.');
     }
@@ -153,12 +165,16 @@ export class AppointmentService {
       where: { id: appointmentId },
     });
     if (!appointment) {
-      throw new NotFoundException(`Appointment with ID ${appointmentId} not found.`);
+      throw new NotFoundException(
+        `Appointment with ID ${appointmentId} not found.`,
+      );
     }
 
     // Only the patient who booked can cancel
     if (appointment.patientId !== patient.id) {
-      throw new ForbiddenException('You can only cancel your own appointments.');
+      throw new ForbiddenException(
+        'You can only cancel your own appointments.',
+      );
     }
 
     if (appointment.status === 'CANCELLED') {
@@ -177,7 +193,9 @@ export class AppointmentService {
 
   // ── My Appointments ─────────────────────────────────────────────────────────
   async getMyAppointments(userId: number) {
-    const patient = await this.patientProfileRepo.findOne({ where: { userId } });
+    const patient = await this.patientProfileRepo.findOne({
+      where: { userId },
+    });
     if (!patient) {
       throw new NotFoundException('Patient profile not found.');
     }
@@ -194,12 +212,12 @@ export class AppointmentService {
     return {
       message: 'Appointments fetched successfully',
       appointments: appointments.map((a) => ({
-        id        : a.id,
-        doctorId  : a.doctorId,
-        date      : a.date,
-        startTime : a.startTime.substring(0, 5),
-        endTime   : a.endTime.substring(0, 5),
-        status    : a.status,
+        id: a.id,
+        doctorId: a.doctorId,
+        date: a.date,
+        startTime: a.startTime.substring(0, 5),
+        endTime: a.endTime.substring(0, 5),
+        status: a.status,
       })),
     };
   }

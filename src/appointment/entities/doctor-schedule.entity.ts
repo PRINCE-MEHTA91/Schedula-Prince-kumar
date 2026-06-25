@@ -57,7 +57,9 @@ export class DoctorSchedule {
   @OneToMany(() => AppointmentSlot, (slot) => slot.schedule, { cascade: true })
   slots: AppointmentSlot[];
 
-  @OneToMany(() => WaveBooking, (booking) => booking.schedule, { cascade: true })
+  @OneToMany(() => WaveBooking, (booking) => booking.schedule, {
+    cascade: true,
+  })
   waveBookings: WaveBooking[];
 
   @CreateDateColumn()

@@ -124,4 +124,31 @@ export class DoctorController {
     const userId: number = req.user.id;
     return this.doctorService.updateProfile(userId, updateDoctorProfileDto);
   }
+
+  // ─── Doctor Appointment Management ─────────────────────────────────────────
+
+  /**
+   * GET /doctor/appointments
+   * Fetch all appointments assigned to the logged-in doctor
+   */
+  @Get('appointments')
+  @Roles(Role.DOCTOR)
+  async getDoctorAppointments(@Request() req: any, @Query('date') date?: string) {
+    const userId: number = req.user.id;
+    return this.appointmentService.getDoctorAppointments(userId, date);
+  }
+
+  /**
+   * PATCH /doctor/appointments/:id/cancel
+   * Doctor cancels an appointment
+   */
+  @Patch('appointments/:id/cancel')
+  @Roles(Role.DOCTOR)
+  async cancelDoctorAppointment(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    const userId: number = req.user.id;
+    return this.appointmentService.cancelDoctorAppointment(id, userId);
+  }
 }

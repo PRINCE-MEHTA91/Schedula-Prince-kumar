@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Patch,
-  Post,
-  Request,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Request } from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { CreatePatientProfileDto } from './dto/create-patient-profile.dto';
 import { UpdatePatientProfileDto } from './dto/update-patient-profile.dto';

@@ -7,6 +7,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsIn,
 } from 'class-validator';
 
 export class CreateDoctorProfileDto {
@@ -48,5 +49,19 @@ export class CreateDoctorProfileDto {
   @Min(5)
   @Max(120)
   slotDuration?: number;
-}
 
+  @IsOptional()
+  @IsString()
+  @IsIn(['STREAM', 'WAVE'])
+  schedulingType?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  bufferTime?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxPatientsPerWave?: number;
+}

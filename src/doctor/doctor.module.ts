@@ -12,7 +12,12 @@ import { AvailabilityController } from './availability.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DoctorProfile, RecurringAvailability, CustomAvailability, Appointment]),
+    TypeOrmModule.forFeature([
+      DoctorProfile,
+      RecurringAvailability,
+      CustomAvailability,
+      Appointment,
+    ]),
     forwardRef(() => AppointmentModule),
   ],
   controllers: [DoctorController, AvailabilityController],

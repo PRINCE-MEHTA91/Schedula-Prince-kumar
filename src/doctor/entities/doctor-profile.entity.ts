@@ -45,6 +45,15 @@ export class DoctorProfile {
   @Column({ type: 'int', default: 15 })
   slotDuration: number; // in minutes
 
+  @Column({ type: 'enum', enum: ['STREAM', 'WAVE'], default: 'STREAM' })
+  schedulingType: string;
+
+  @Column({ type: 'int', default: 0 })
+  bufferTime: number; // in minutes (for STREAM scheduling)
+
+  @Column({ type: 'int', nullable: true })
+  maxPatientsPerWave: number; // for WAVE scheduling
+
   @OneToOne(() => User, { eager: false })
   @JoinColumn({ name: 'userId' })
   user: User;
@@ -52,10 +61,16 @@ export class DoctorProfile {
   @Column()
   userId: number;
 
-  @OneToMany(() => RecurringAvailability, (availability) => availability.doctorProfile)
+  @OneToMany(
+    () => RecurringAvailability,
+    (availability) => availability.doctorProfile,
+  )
   recurringAvailabilities: RecurringAvailability[];
 
-  @OneToMany(() => CustomAvailability, (availability) => availability.doctorProfile)
+  @OneToMany(
+    () => CustomAvailability,
+    (availability) => availability.doctorProfile,
+  )
   customAvailabilities: CustomAvailability[];
 
   @CreateDateColumn()

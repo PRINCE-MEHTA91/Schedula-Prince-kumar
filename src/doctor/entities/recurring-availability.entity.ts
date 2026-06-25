@@ -18,7 +18,11 @@ export class RecurringAvailability {
   @Column()
   doctorProfileId: number;
 
-  @ManyToOne(() => DoctorProfile, (profile) => profile.recurringAvailabilities, { onDelete: 'CASCADE' })
+  @ManyToOne(
+    () => DoctorProfile,
+    (profile) => profile.recurringAvailabilities,
+    { onDelete: 'CASCADE' },
+  )
   @JoinColumn({ name: 'doctorProfileId' })
   doctorProfile: DoctorProfile;
 

@@ -55,8 +55,8 @@ function makeDoctor(overrides: Partial<DoctorProfile> = {}): DoctorProfile {
 // ─────────────────────────────────────────────────────────────────────────────
 const mockRepo = {
   findAndCount: jest.fn(), // list fetch ke liye
-  findOne: jest.fn(),      // single record fetch ke liye
-  create: jest.fn(),       // doosre methods ke liye zaroori
+  findOne: jest.fn(), // single record fetch ke liye
+  create: jest.fn(), // doosre methods ke liye zaroori
   save: jest.fn(),
 };
 
@@ -83,7 +83,6 @@ describe('DoctorService — Discovery APIs', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
-
 
   // 1. BASIC LISTING — bina kisi filter ke doctors ki list
 
@@ -316,7 +315,9 @@ describe('DoctorService — Discovery APIs', () => {
       const result = await service.findAll({});
 
       expect(result.doctors).toEqual([]);
-      expect(result.message).toBe('No doctors are registered on the platform yet.');
+      expect(result.message).toBe(
+        'No doctors are registered on the platform yet.',
+      );
     });
 
     it('should mention search term in message when naam search empty aaye', async () => {
@@ -348,7 +349,9 @@ describe('DoctorService — Discovery APIs', () => {
       // Empty results valid hain — NotFoundException nahi aani chahiye
       mockRepo.findAndCount.mockResolvedValue([[], 0]);
 
-      await expect(service.findAll({ search: 'nobody' })).resolves.toBeDefined();
+      await expect(
+        service.findAll({ search: 'nobody' }),
+      ).resolves.toBeDefined();
     });
   });
 
