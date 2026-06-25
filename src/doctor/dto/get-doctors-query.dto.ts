@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsBoolean, IsInt, Min, Max, IsNotEmpty } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsInt,
+  Min,
+  Max,
+  IsNotEmpty,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class GetDoctorsQueryDto {
@@ -32,7 +40,7 @@ export class GetDoctorsQueryDto {
   // ?availability=true — sirf available/unavailable doctors filter karo
   @IsOptional()
   @Transform(({ value }) => {
-    if (value === 'true') return true;   // string "true" → boolean true
+    if (value === 'true') return true; // string "true" → boolean true
     if (value === 'false') return false; // string "false" → boolean false
     return value;
   })

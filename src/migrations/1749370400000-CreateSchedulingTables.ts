@@ -121,9 +121,7 @@ export class CreateSchedulingTables1749370400000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "appointments"`);
-    await queryRunner.query(
-      `DROP TYPE IF EXISTS "appointments_status_enum"`,
-    );
+    await queryRunner.query(`DROP TYPE IF EXISTS "appointments_status_enum"`);
     await queryRunner.query(
       `DROP TYPE IF EXISTS "appointments_schedulingtype_enum"`,
     );

@@ -10,9 +10,9 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,            // Strip fields not in DTO
+      whitelist: true, // Strip fields not in DTO
       forbidNonWhitelisted: true, // Return 400 for unknown params
-      transform: true,            // Auto-convert query strings to numbers/booleans
+      transform: true, // Auto-convert query strings to numbers/booleans
       transformOptions: {
         enableImplicitConversion: true, // e.g. "1" → 1, "true" → true
       },

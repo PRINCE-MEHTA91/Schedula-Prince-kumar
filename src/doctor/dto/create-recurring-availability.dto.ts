@@ -2,7 +2,9 @@ import { IsEnum, IsString, Matches, IsNotEmpty } from 'class-validator';
 import { DayOfWeek } from '../enums/day-of-week.enum';
 
 export class CreateRecurringAvailabilityDto {
-  @IsEnum(DayOfWeek, { message: 'dayOfWeek must be a valid enum value (e.g., MONDAY, TUESDAY)' })
+  @IsEnum(DayOfWeek, {
+    message: 'dayOfWeek must be a valid enum value (e.g., MONDAY, TUESDAY)',
+  })
   @IsNotEmpty()
   dayOfWeek: DayOfWeek;
 

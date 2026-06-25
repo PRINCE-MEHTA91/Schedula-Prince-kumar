@@ -17,7 +17,9 @@ export class CustomAvailability {
   @Column()
   doctorProfileId: number;
 
-  @ManyToOne(() => DoctorProfile, (profile) => profile.customAvailabilities, { onDelete: 'CASCADE' })
+  @ManyToOne(() => DoctorProfile, (profile) => profile.customAvailabilities, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'doctorProfileId' })
   doctorProfile: DoctorProfile;
 

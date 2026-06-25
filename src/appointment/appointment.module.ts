@@ -9,8 +9,13 @@ import { RecurringAvailability } from '../doctor/entities/recurring-availability
 import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
 import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
+  imports: [
+    TypeOrmModule.forFeature([Appointment, DoctorProfile, PatientProfile]),
+    // Import NotificationModule so AppointmentService can inject NotificationService
+    NotificationModule,
   // Register all repositories this module needs
   imports: [
     TypeOrmModule.forFeature([
@@ -25,7 +30,6 @@ import { AppointmentController } from './appointment.controller';
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],
-  // Export so DoctorModule can use AppointmentService for GET /doctor/appointments
   exports: [AppointmentService],
 })
 export class AppointmentModule {}
