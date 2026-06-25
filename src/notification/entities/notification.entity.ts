@@ -15,6 +15,18 @@ export enum NotificationType {
   FOLLOW_UP_REMINDER = 'FOLLOW_UP_REMINDER',
 }
 
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
+import { PatientProfile } from '../../patient/entities/patient-profile.entity';
+import { NotificationType } from '../enums/notification-type.enum';
+
+/**
+ * Persisted record for every in-app notification sent to a patient.
+ *
+ * DB table: notifications
+ */
 @Entity('notifications')
 export class Notification {
   @PrimaryGeneratedColumn()

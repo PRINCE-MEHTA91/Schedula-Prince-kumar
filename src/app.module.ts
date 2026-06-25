@@ -12,6 +12,7 @@ import { UsersModule } from './users/users.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
 import { AppointmentModule } from './appointment/appointment.module';
+import { NotificationModule } from './notification/notification.module';
 import { DoctorProfile } from './doctor/entities/doctor-profile.entity';
 import { PatientProfile } from './patient/entities/patient-profile.entity';
 import { Appointment } from './appointment/entities/appointment.entity';
@@ -19,6 +20,9 @@ import { RecurringAvailability } from './doctor/entities/recurring-availability.
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
 import { NotificationModule } from './notification/notification.module';
 import { Notification } from './notification/entities/notification.entity';
+import { Notification } from './notification/entities/notification.entity';
+import { StreamSlot } from './appointment/entities/stream-slot.entity';
+import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
 
 /**
  * Root application module.
@@ -43,6 +47,9 @@ import { Notification } from './notification/entities/notification.entity';
         RecurringAvailability,
         CustomAvailability,
         Notification, // notifications table
+        Notification,
+        StreamSlot,
+        WaveSchedule,
       ],
       synchronize: false, // Use migrations instead of auto-sync
       migrations: ['dist/migrations/*{.ts,.js}'],

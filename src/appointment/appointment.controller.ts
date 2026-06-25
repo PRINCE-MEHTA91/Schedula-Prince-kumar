@@ -11,13 +11,37 @@ import {
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { BookAppointmentDto } from './dto/book-appointment.dto';
+import { BookNextAvailableDto } from './dto/book-next-available.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
+import { Public } from '../auth/public.decorator';
 
 @Controller('appointment')
 export class AppointmentController {
   constructor(private readonly appointmentService: AppointmentService) {}
+
+  // GET /appointment/next-available?doctorId=3
+  // Public — any authenticated or anonymous user can check availability
+  @Get('next-available')
+  @Public()
+  async findNextAvailable(
+    @Query('doctorId', ParseIntPipe) doctorId: number,
+  ) {
+    return this.appointmentService.findNextAvailable(doctorId);
+  }
+
+  // POST /appointment/book-next-available
+  // Patient books a slot that was surfaced by GET /appointment/next-available
+  @Post('book-next-available')
+  @Roles(Role.PATIENT)
+  async bookNextAvailableSlot(
+    @Request() req: any,
+    @Body() dto: BookNextAvailableDto,
+  ) {
+    const patientUserId: number = req.user.id;
+    return this.appointmentService.bookNextAvailableSlot(patientUserId, dto);
+  }
 
   // POST /appointment — Book a new appointment (PATIENT only)
   @Post()

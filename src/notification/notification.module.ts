@@ -15,6 +15,11 @@ import { NotificationController } from './notification.controller';
   controllers: [NotificationController],
   providers: [NotificationService],
   // Export so AppointmentModule can inject NotificationService
+    TypeOrmModule.forFeature([Notification, PatientProfile]),
+  ],
+  controllers: [NotificationController],
+  providers: [NotificationService],
+  // Export so AppointmentService (or any future service) can inject it
   exports: [NotificationService],
 })
 export class NotificationModule {}
