@@ -13,11 +13,6 @@ import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Appointment, DoctorProfile, PatientProfile]),
-    // Import NotificationModule so AppointmentService can inject NotificationService
-    NotificationModule,
-  // Register all repositories this module needs
-  imports: [
     TypeOrmModule.forFeature([
       Appointment,
       DoctorProfile,
@@ -27,6 +22,8 @@ import { NotificationModule } from '../notification/notification.module';
       RecurringAvailability,
       CustomAvailability,
     ]),
+    // Import NotificationModule so AppointmentService can inject NotificationService
+    NotificationModule,
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],

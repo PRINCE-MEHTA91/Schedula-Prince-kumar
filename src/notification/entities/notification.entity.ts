@@ -5,21 +5,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
-// Supported notification event types
-export enum NotificationType {
-  APPOINTMENT_BOOKED = 'APPOINTMENT_BOOKED',
-  APPOINTMENT_CANCELLED = 'APPOINTMENT_CANCELLED',
-  APPOINTMENT_RESCHEDULED = 'APPOINTMENT_RESCHEDULED',
-  APPOINTMENT_REMINDER = 'APPOINTMENT_REMINDER',
-  FOLLOW_UP_REMINDER = 'FOLLOW_UP_REMINDER',
-}
-
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-} from 'typeorm';
-import { PatientProfile } from '../../patient/entities/patient-profile.entity';
 import { NotificationType } from '../enums/notification-type.enum';
 
 /**

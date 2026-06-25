@@ -18,7 +18,7 @@ import { BookAppointmentDto } from './dto/book-appointment.dto';
 import { BookNextAvailableDto } from './dto/book-next-available.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from '../notification/entities/notification.entity';
+import { NotificationType } from '../notification/enums/notification-type.enum';
 import { DayOfWeek } from '../doctor/enums/day-of-week.enum';
 
 /** Maximum number of calendar days to search forward for next available slot. */
@@ -49,7 +49,7 @@ export class AppointmentService {
 
     // Injected to auto-create notifications on appointment events
     private readonly notificationService: NotificationService,
-  ) {}
+
     @InjectRepository(StreamSlot)
     private readonly streamSlotRepo: Repository<StreamSlot>,
 
@@ -61,7 +61,7 @@ export class AppointmentService {
 
     @InjectRepository(CustomAvailability)
     private readonly customAvailRepo: Repository<CustomAvailability>,
-  ) { }
+  ) {}
 
   // ─── 1. Book Appointment (PATIENT only) ──────────────────────────────────────
 
@@ -164,19 +164,6 @@ export class AppointmentService {
           suggestedSlots: nextAvailable.slots
         });
       }
-    // Step 5: Check this exact slot is not already booked (same doctor + date + startTime)
-    const existing = await this.appointmentRepo.findOne({
-      where: {
-        doctorId: dto.doctorId,
-        date: dto.date,
-        startTime: dto.startTime,
-        status: AppointmentStatus.CONFIRMED,
-      },
-    });
-    if (existing) {
-      throw new ConflictException(
-        `This slot (${dto.startTime} on ${dto.date}) is already booked. Please choose another slot.`,
-      );
     }
 
     // All checks passed — create the appointment
@@ -188,7 +175,6 @@ export class AppointmentService {
       endTime: dto.endTime,
       status: AppointmentStatus.BOOKED,
       tokenNumber, // will be null for STREAM
-      status: AppointmentStatus.CONFIRMED,
     });
 
     const saved = await this.appointmentRepo.save(appointment);
@@ -199,12 +185,12 @@ export class AppointmentService {
       'en-IN',
       { day: 'numeric', month: 'long' },
     );
-    await this.notificationService.createNotification(
-      patient.id,
-      NotificationType.APPOINTMENT_BOOKED,
-      'Appointment Booked',
-      `Your appointment with Dr. ${doctor.fullName} has been booked successfully for ${bookedDateLabel} at ${dto.startTime}.`,
-    );
+    await this.notificationService.createNotification({
+      patientId: patient.id,
+      type: NotificationType.APPOINTMENT_BOOKED,
+      title: 'Appointment Booked',
+      message: `Your appointment with Dr. ${doctor.fullName} has been booked successfully for ${bookedDateLabel} at ${dto.startTime}.`,
+    });
 
     return {
       message: 'Appointment booked successfully',
@@ -356,16 +342,6 @@ export class AppointmentService {
           suggestedSlots: nextAvailable.slots
         });
       }
-    // Step 5: Check overlap (ignoring this exact appointment)
-    const existing = await this.appointmentRepo.findOne({
-      where: {
-        doctorId: appointment.doctorId,
-        date: newDate,
-        startTime: newStartTime,
-        status: AppointmentStatus.CONFIRMED,
-      },
-    });
-
       tokenNumber = otherWaveAppts.length + 1;
     } else {
       const existing = await this.appointmentRepo.findOne({
@@ -400,12 +376,12 @@ export class AppointmentService {
     const rescheduledDateLabel = new Date(
       `${newDate}T00:00:00`,
     ).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
-    await this.notificationService.createNotification(
-      appointment.patient.id,
-      NotificationType.APPOINTMENT_RESCHEDULED,
-      'Appointment Rescheduled',
-      `Your appointment has been rescheduled to ${rescheduledDateLabel} at ${newStartTime}.`,
-    );
+    await this.notificationService.createNotification({
+      patientId: appointment.patient.id,
+      type: NotificationType.APPOINTMENT_RESCHEDULED,
+      title: 'Appointment Rescheduled',
+      message: `Your appointment has been rescheduled to ${rescheduledDateLabel} at ${newStartTime}.`,
+    });
 
     return {
       message: 'Appointment updated successfully',
@@ -471,12 +447,12 @@ export class AppointmentService {
     const cancelledDateLabel = new Date(
       `${appointment.date}T00:00:00`,
     ).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
-    await this.notificationService.createNotification(
-      patient.id,
-      NotificationType.APPOINTMENT_CANCELLED,
-      'Appointment Cancelled',
-      `Your appointment scheduled on ${cancelledDateLabel} at ${appointment.startTime} has been cancelled.`,
-    );
+    await this.notificationService.createNotification({
+      patientId: patient.id,
+      type: NotificationType.APPOINTMENT_CANCELLED,
+      title: 'Appointment Cancelled',
+      message: `Your appointment scheduled on ${cancelledDateLabel} at ${appointment.startTime} has been cancelled.`,
+    });
 
     return {
       message: 'Appointment cancelled successfully',
@@ -487,7 +463,6 @@ export class AppointmentService {
   // ─── 5. Doctor's Appointment View (DOCTOR only) ──────────────────────────────
 
   async getDoctorAppointments(doctorUserId: number, dateFilter?: string) {
-  async getDoctorAppointments(doctorUserId: number, date?: string) {
     // Find doctor profile by userId
     const doctor = await this.doctorRepo.findOne({
       where: { userId: doctorUserId },
@@ -514,24 +489,7 @@ export class AppointmentService {
     // Get all appointments for this doctor with patient info
     let appointments = await this.appointmentRepo.find({
       where: whereClause,
-    // Build where clause — exclude CANCELLED; show CONFIRMED, PENDING, RESCHEDULED
-    const where: any = { 
-      doctorId: doctor.id,
-      status: AppointmentStatus.CONFIRMED,
-    };
-    if (date) {
-      // Basic date format validation check, assuming date is YYYY-MM-DD
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        throw new BadRequestException('Invalid date format. Use YYYY-MM-DD.');
-      }
-      // 'date' property maps to 'appointmentDate' column via @Column({ name: 'appointmentDate' })
-      where.date = date;
-    }
-
-    // Get all appointments for this doctor with patient info
-    const appointments = await this.appointmentRepo.find({
-      where,
-      relations: { patient: true }, // brings in PatientProfile data
+      relations: { patient: true },
       order: { date: 'ASC', startTime: 'ASC' },
     });
 
@@ -552,9 +510,7 @@ export class AppointmentService {
       startTime: appt.startTime,
       endTime: appt.endTime,
       status: appt.status,
-      schedulingType: 'Stream', // Defaulting to Stream as Wave scheduling is not yet fully implemented
-      patient: {
-      schedulingType: 'STREAM', // Defaulting to STREAM
+      schedulingType: appt.schedulingType || doctor.schedulingType || 'STREAM',
       patient: appt.patient ? {
         id: appt.patient.id,
         fullName: appt.patient.fullName,
@@ -570,15 +526,15 @@ export class AppointmentService {
     };
   }
 
-  // ─── Doctor Cancels Appointment (DOCTOR only) ──────────────────────────────
+  // ─── 6. Cancel Appointment By Doctor (DOCTOR only) ───────────────────────────
 
-  async cancelDoctorAppointment(appointmentId: number, doctorUserId: number) {
+  async cancelAppointmentByDoctor(appointmentId: number, doctorUserId: number) {
     // Find doctor profile to verify ownership
     const doctor = await this.doctorRepo.findOne({
       where: { userId: doctorUserId },
     });
     if (!doctor) {
-      throw new NotFoundException('Doctor profile not found.');
+      throw new NotFoundException('Doctor profile not found. Please complete your profile first.');
     }
 
     // Find the appointment by ID and include patient relation for notification
@@ -588,45 +544,15 @@ export class AppointmentService {
     });
 
     if (!appointment) {
-      throw new NotFoundException(
-        `Appointment with ID ${appointmentId} not found.`,
-      );
+      throw new NotFoundException(`Appointment with ID ${appointmentId} not found.`);
     }
 
     // Verify ownership
     if (appointment.doctorId !== doctor.id) {
-      throw new ForbiddenException(
-        'You are not authorized to cancel this appointment.',
-      );
-    }
-
-    // Check if already cancelled
-  // ─── 6. Cancel Appointment By Doctor (DOCTOR only) ───────────────────────────
-
-  async cancelAppointmentByDoctor(appointmentId: number, doctorUserId: number) {
-    // Find the appointment by ID
-    const appointment = await this.appointmentRepo.findOne({
-      where: { id: appointmentId },
-    });
-
-    if (!appointment) {
-      throw new NotFoundException(`Appointment with ID ${appointmentId} not found.`);
-    }
-
-    // Find doctor profile to verify ownership
-    const doctor = await this.doctorRepo.findOne({
-      where: { userId: doctorUserId },
-    });
-    if (!doctor) {
-      throw new NotFoundException('Doctor profile not found. Please complete your profile first.');
-    }
-
-    // Case 2: Doctor does not own this appointment
-    if (appointment.doctorId !== doctor.id) {
       throw new ForbiddenException('You are not authorized to cancel this appointment.');
     }
 
-    // Case 3: Already cancelled
+    // Check if already cancelled
     if (appointment.status === AppointmentStatus.CANCELLED) {
       throw new BadRequestException('This appointment is already cancelled.');
     }
@@ -639,16 +565,13 @@ export class AppointmentService {
     const cancelledDateLabel = new Date(
       `${appointment.date}T00:00:00`,
     ).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
-    await this.notificationService.createNotification(
-      appointment.patient.id,
-      NotificationType.APPOINTMENT_CANCELLED,
-      'Appointment Cancelled',
-      `Your appointment scheduled on ${cancelledDateLabel} at ${appointment.startTime} has been cancelled by Dr. ${doctor.fullName}.`,
-    );
-
-    // All good — mark as cancelled
-    appointment.status = AppointmentStatus.CANCELLED;
-    const updated = await this.appointmentRepo.save(appointment);
+    
+    await this.notificationService.createNotification({
+      patientId: appointment.patient.id,
+      type: NotificationType.APPOINTMENT_CANCELLED,
+      title: 'Appointment Cancelled',
+      message: `Your appointment scheduled on ${cancelledDateLabel} at ${appointment.startTime} has been cancelled by Dr. ${doctor.fullName}.`,
+    });
 
     return {
       message: 'Appointment cancelled successfully',
@@ -763,9 +686,7 @@ export class AppointmentService {
         currentMin = nextMin + bufferTimeMinutes;
       }
     }
-    // Using 30-min slots
-    const slotDurationMinutes = 30;
-    const slots: { startTime: string; endTime: string }[] = [];
+
 
     return {
       message: 'Available slots fetched successfully',

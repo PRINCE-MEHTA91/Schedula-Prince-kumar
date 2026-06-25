@@ -100,20 +100,5 @@ export class AppointmentController {
       return { statusCode: 500, message: error.message, stack: error.stack };
     }
   }
-  // GET /appointment/next-available — Get the next available slot for a doctor
-  @Get('next-available')
-  @Roles(Role.PATIENT)
-  async getNextAvailableSlots(
-    @Query('doctorId', ParseIntPipe) doctorId: number,
-    @Query('date') date: string,
-  ) {
-    try {
-      // Use today's date if date is not provided
-      const startDate = date || new Date().toISOString().split('T')[0];
-      return await this.appointmentService.getNextAvailableSlots(doctorId, startDate);
-    } catch (error) {
-      console.error(error);
-      return { statusCode: 500, message: error.message, stack: error.stack };
-    }
-  }
+
 }

@@ -57,12 +57,5 @@ export class AddDoctorAvailability1781158772409 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "doctor_profiles" ADD CONSTRAINT "FK_doctor_profiles_userId" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
-  }
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Redundant migration - tables already created manually.
-    }
-
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Redundant migration
-    }
+}
 }
