@@ -12,6 +12,7 @@ import { StreamSlot } from './appointment/entities/stream-slot.entity';
 import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
 import { RecurringAvailability } from './doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from './doctor/entities/custom-availability.entity';
+import { Notification } from './notification/entities/notification.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -28,6 +29,7 @@ export const AppDataSource = new DataSource({
     WaveSchedule,
     RecurringAvailability,
     CustomAvailability,
+    Notification,
   ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

@@ -1,9 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 // isAvailable column add karta hai — default true (existing doctors available rahenge)
-export class AddIsAvailableToDoctorProfiles1749370300000
-  implements MigrationInterface
-{
+export class AddIsAvailableToDoctorProfiles1749370300000 implements MigrationInterface {
   name = 'AddIsAvailableToDoctorProfiles1749370300000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

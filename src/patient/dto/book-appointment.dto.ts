@@ -1,4 +1,10 @@
-import { IsDateString, IsInt, IsNotEmpty, IsPositive, Matches } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsPositive,
+  Matches,
+} from 'class-validator';
 
 export class BookAppointmentDto {
   @IsInt()

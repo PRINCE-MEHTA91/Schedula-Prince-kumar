@@ -5,15 +5,16 @@ import { DoctorProfile } from '../doctor/entities/doctor-profile.entity';
 import { PatientProfile } from '../patient/entities/patient-profile.entity';
 import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  // Register all 3 repositories this module needs
   imports: [
     TypeOrmModule.forFeature([Appointment, DoctorProfile, PatientProfile]),
+    // Import NotificationModule so AppointmentService can inject NotificationService
+    NotificationModule,
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],
-  // Export so DoctorModule can use AppointmentService for GET /doctor/appointments
   exports: [AppointmentService],
 })
 export class AppointmentModule {}

@@ -12,7 +12,7 @@ import { PatientProfile } from '../../patient/entities/patient-profile.entity';
 
 // Status of the appointment — BOOKED or CANCELLED
 export enum AppointmentStatus {
-  BOOKED = 'BOOKED',
+  BOOKED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
 }
 
@@ -38,7 +38,7 @@ export class Appointment {
   patientId: number;
 
   // Date of appointment e.g. "2026-06-20"
-  @Column()
+  @Column({ name: 'appointmentDate' })
   date: string;
 
   // Start time e.g. "10:00"
@@ -56,6 +56,10 @@ export class Appointment {
     default: AppointmentStatus.BOOKED,
   })
   status: AppointmentStatus;
+
+  // Token number assigned to the patient (only for WAVE scheduling)
+  @Column({ type: 'int', nullable: true })
+  tokenNumber: number | null;
 
   @CreateDateColumn()
   createdAt: Date;

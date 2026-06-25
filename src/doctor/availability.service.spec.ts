@@ -68,7 +68,10 @@ describe('AvailabilityService', () => {
     });
 
     it('should throw BadRequestException for past dates', async () => {
-      mockDoctorProfileRepo.findOne.mockResolvedValue({ id: 1, slotDuration: 15 });
+      mockDoctorProfileRepo.findOne.mockResolvedValue({
+        id: 1,
+        slotDuration: 15,
+      });
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const pastDate = yesterday.toISOString().split('T')[0];
@@ -79,7 +82,10 @@ describe('AvailabilityService', () => {
     });
 
     it('should return slots from recurring availability', async () => {
-      mockDoctorProfileRepo.findOne.mockResolvedValue({ id: 1, slotDuration: 15 });
+      mockDoctorProfileRepo.findOne.mockResolvedValue({
+        id: 1,
+        slotDuration: 15,
+      });
       mockCustomRepo.find.mockResolvedValue([]);
       mockRecurringRepo.find.mockResolvedValue([
         { startTime: '10:00:00', endTime: '11:00:00' },
@@ -97,7 +103,10 @@ describe('AvailabilityService', () => {
     });
 
     it('should prioritize custom availability over recurring', async () => {
-      mockDoctorProfileRepo.findOne.mockResolvedValue({ id: 1, slotDuration: 15 });
+      mockDoctorProfileRepo.findOne.mockResolvedValue({
+        id: 1,
+        slotDuration: 15,
+      });
       mockCustomRepo.find.mockResolvedValue([
         { startTime: '14:00:00', endTime: '14:30:00', isAvailable: true },
       ]);
@@ -119,7 +128,10 @@ describe('AvailabilityService', () => {
     });
 
     it('should filter out booked slots', async () => {
-      mockDoctorProfileRepo.findOne.mockResolvedValue({ id: 1, slotDuration: 15 });
+      mockDoctorProfileRepo.findOne.mockResolvedValue({
+        id: 1,
+        slotDuration: 15,
+      });
       mockCustomRepo.find.mockResolvedValue([]);
       mockRecurringRepo.find.mockResolvedValue([
         { startTime: '10:00:00', endTime: '11:00:00' },

@@ -27,7 +27,9 @@ export class AvailabilityService {
     private appointmentRepo: Repository<Appointment>,
   ) {}
 
-  private async getDoctorProfileByUserId(userId: number): Promise<DoctorProfile> {
+  private async getDoctorProfileByUserId(
+    userId: number,
+  ): Promise<DoctorProfile> {
     const profile = await this.doctorProfileRepo.findOne({ where: { userId } });
     if (!profile) {
       throw new NotFoundException('Doctor profile not found');
@@ -37,7 +39,9 @@ export class AvailabilityService {
 
   private validateTimeRange(startTime: string, endTime: string) {
     if (startTime >= endTime) {
-      throw new BadRequestException('Invalid time range: startTime must be before endTime');
+      throw new BadRequestException(
+        'Invalid time range: startTime must be before endTime',
+      );
     }
   }
 
@@ -46,8 +50,13 @@ export class AvailabilityService {
     newSlot: { startTime: string; endTime: string },
   ) {
     for (const slot of slots) {
-      if (newSlot.startTime < slot.endTime && slot.startTime < newSlot.endTime) {
-        throw new BadRequestException('Time slot overlaps with existing availability');
+      if (
+        newSlot.startTime < slot.endTime &&
+        slot.startTime < newSlot.endTime
+      ) {
+        throw new BadRequestException(
+          'Time slot overlaps with existing availability',
+        );
       }
     }
   }
@@ -57,14 +66,17 @@ export class AvailabilityService {
     this.validateTimeRange(dto.startTime, dto.endTime);
 
     const existing = await this.recurringAvailabilityRepo.find({
-      where: { doctorProfileId: profile.id, dayOfWeek: dto.dayOfWeek as any },
+      where: { doctorProfileId: profile.id, dayOfWeek: dto.dayOfWeek },
     });
-    this.checkOverlap(existing as any, { startTime: dto.startTime, endTime: dto.endTime });
+    this.checkOverlap(existing, {
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+    });
 
     const availability = this.recurringAvailabilityRepo.create({
       ...dto,
       doctorProfileId: profile.id,
-      dayOfWeek: dto.dayOfWeek as any,
+      dayOfWeek: dto.dayOfWeek,
     });
 
     return this.recurringAvailabilityRepo.save(availability);
@@ -78,16 +90,24 @@ export class AvailabilityService {
     });
   }
 
-  async updateRecurring(userId: number, id: number, dto: UpdateRecurringAvailabilityDto) {
+  async updateRecurring(
+    userId: number,
+    id: number,
+    dto: UpdateRecurringAvailabilityDto,
+  ) {
     const profile = await this.getDoctorProfileByUserId(userId);
-    const availability = await this.recurringAvailabilityRepo.findOne({ where: { id } });
+    const availability = await this.recurringAvailabilityRepo.findOne({
+      where: { id },
+    });
 
     if (!availability) {
       throw new NotFoundException('Recurring availability not found');
     }
 
     if (availability.doctorProfileId !== profile.id) {
-      throw new UnauthorizedException('You can only update your own availability');
+      throw new UnauthorizedException(
+        'You can only update your own availability',
+      );
     }
 
     const updatedDayOfWeek = dto.dayOfWeek || availability.dayOfWeek;
@@ -97,10 +117,16 @@ export class AvailabilityService {
     this.validateTimeRange(updatedStartTime, updatedEndTime);
 
     const existing = await this.recurringAvailabilityRepo.find({
-      where: { doctorProfileId: profile.id, dayOfWeek: updatedDayOfWeek as any },
+      where: {
+        doctorProfileId: profile.id,
+        dayOfWeek: updatedDayOfWeek,
+      },
     });
     const otherSlots = existing.filter((slot) => slot.id !== id);
-    this.checkOverlap(otherSlots as any, { startTime: updatedStartTime, endTime: updatedEndTime });
+    this.checkOverlap(otherSlots, {
+      startTime: updatedStartTime,
+      endTime: updatedEndTime,
+    });
 
     Object.assign(availability, dto);
     return this.recurringAvailabilityRepo.save(availability);
@@ -108,14 +134,18 @@ export class AvailabilityService {
 
   async deleteRecurring(userId: number, id: number) {
     const profile = await this.getDoctorProfileByUserId(userId);
-    const availability = await this.recurringAvailabilityRepo.findOne({ where: { id } });
+    const availability = await this.recurringAvailabilityRepo.findOne({
+      where: { id },
+    });
 
     if (!availability) {
       throw new NotFoundException('Recurring availability not found');
     }
 
     if (availability.doctorProfileId !== profile.id) {
-      throw new UnauthorizedException('You can only delete your own availability');
+      throw new UnauthorizedException(
+        'You can only delete your own availability',
+      );
     }
 
     await this.recurringAvailabilityRepo.remove(availability);
@@ -128,14 +158,23 @@ export class AvailabilityService {
     const isAvailable = dto.isAvailable !== false;
     if (isAvailable) {
       if (!dto.startTime || !dto.endTime) {
-        throw new BadRequestException('startTime and endTime are required when isAvailable is true');
+        throw new BadRequestException(
+          'startTime and endTime are required when isAvailable is true',
+        );
       }
       this.validateTimeRange(dto.startTime, dto.endTime);
 
       const existing = await this.customAvailabilityRepo.find({
-        where: { doctorProfileId: profile.id, date: dto.date, isAvailable: true },
+        where: {
+          doctorProfileId: profile.id,
+          date: dto.date,
+          isAvailable: true,
+        },
       });
-      this.checkOverlap(existing as any, { startTime: dto.startTime, endTime: dto.endTime });
+      this.checkOverlap(existing as any, {
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+      });
     }
 
     const override = this.customAvailabilityRepo.create({
@@ -169,7 +208,15 @@ export class AvailabilityService {
       return { date: dateStr, slots: customSlots, type: 'custom' };
     }
 
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     const dayOfWeek = days[date.getDay()];
 
     const recurringSlots = await this.recurringAvailabilityRepo.find({
@@ -204,7 +251,9 @@ export class AvailabilityService {
 
     const slotDuration = doctor.slotDuration || 15;
     if (slotDuration <= 0) {
-      throw new BadRequestException('Invalid slot duration configured for doctor');
+      throw new BadRequestException(
+        'Invalid slot duration configured for doctor',
+      );
     }
 
     let rawAvailabilities: { startTime: string; endTime: string }[] = [];
@@ -221,11 +270,21 @@ export class AvailabilityService {
           endTime: c.endTime as string,
         }));
     } else {
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const days = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
       const dayOfWeek = days[targetDate.getDay()];
-      const recurringAvailabilities = await this.recurringAvailabilityRepo.find({
-        where: { doctorProfileId: doctorId, dayOfWeek: dayOfWeek as any },
-      });
+      const recurringAvailabilities = await this.recurringAvailabilityRepo.find(
+        {
+          where: { doctorProfileId: doctorId, dayOfWeek: dayOfWeek as any },
+        },
+      );
       rawAvailabilities = recurringAvailabilities.map((r) => ({
         startTime: r.startTime,
         endTime: r.endTime,
@@ -238,7 +297,12 @@ export class AvailabilityService {
 
     let allSlots: { start: Date; end: Date }[] = [];
     for (const av of rawAvailabilities) {
-      const slots = this.generateTimeSlots(dateString, av.startTime, av.endTime, slotDuration);
+      const slots = this.generateTimeSlots(
+        dateString,
+        av.startTime,
+        av.endTime,
+        slotDuration,
+      );
       allSlots = [...allSlots, ...slots];
     }
 
@@ -248,7 +312,7 @@ export class AvailabilityService {
     allSlots = allSlots.filter((slot) => slot.start > now);
 
     const appointments = await this.appointmentRepo.find({
-      where: { doctorId, date: dateString, status: 'BOOKED' as any },
+      where: { doctorId, date: dateString, status: 'BOOKED' },
     });
 
     const availableSlots = allSlots.filter((slot) => {
