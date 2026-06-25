@@ -59,6 +59,10 @@ export class Appointment {
   @Column({ nullable: true })
   notes: string;
 
+  // Token number assigned to the patient (only for WAVE scheduling)
+  @Column({ type: 'int', nullable: true })
+  tokenNumber: number | null;
+
   // Status — matches real DB enum
   @Column({
     type: 'enum',
