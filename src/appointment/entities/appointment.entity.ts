@@ -53,14 +53,6 @@ export class Appointment {
   @Column()
   endTime: string;
 
-  // Scheduling type — STREAM or WAVE (nullable for backwards compat)
-  @Column({ nullable: true })
-  schedulingType: string;
-
-  // Optional notes
-  @Column({ nullable: true })
-  notes: string;
-
   // Status — matches real DB enum
   @Column({
     type: 'enum',
@@ -72,6 +64,10 @@ export class Appointment {
   // Token number assigned to the patient (only for WAVE scheduling)
   @Column({ type: 'int', nullable: true })
   tokenNumber: number | null;
+
+  // Track if reminder has been sent for this appointment
+  @Column({ default: false })
+  isReminderSent: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

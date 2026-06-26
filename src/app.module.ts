@@ -22,6 +22,7 @@ import { CustomAvailability } from './doctor/entities/custom-availability.entity
 import { Notification } from './notification/entities/notification.entity';
 import { StreamSlot } from './appointment/entities/stream-slot.entity';
 import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 
 /**
  * Root application module.
@@ -30,6 +31,7 @@ import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
 
     // PostgreSQL connection
     TypeOrmModule.forRoot({

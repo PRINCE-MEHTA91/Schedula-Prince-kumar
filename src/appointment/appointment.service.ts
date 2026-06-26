@@ -510,7 +510,7 @@ export class AppointmentService {
       startTime: appt.startTime,
       endTime: appt.endTime,
       status: appt.status,
-      schedulingType: appt.schedulingType || doctor.schedulingType || 'STREAM',
+      schedulingType: doctor.schedulingType || 'STREAM',
       patient: appt.patient ? {
         id: appt.patient.id,
         fullName: appt.patient.fullName,
