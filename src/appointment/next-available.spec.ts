@@ -24,6 +24,7 @@ import { WaveSchedule } from './entities/wave-schedule.entity';
 import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
 import { DayOfWeek } from '../doctor/enums/day-of-week.enum';
+import { NotificationService } from '../notification/notification.service';
 
 // ─── Shared mock factory ────────────────────────────────────────────────────
 const mockRepo = () => ({
@@ -80,6 +81,7 @@ describe('AppointmentService.findNextAvailable()', () => {
         { provide: getRepositoryToken(WaveSchedule), useFactory: mockRepo },
         { provide: getRepositoryToken(RecurringAvailability), useFactory: mockRepo },
         { provide: getRepositoryToken(CustomAvailability), useFactory: mockRepo },
+        { provide: NotificationService, useValue: { createNotification: jest.fn() } },
       ],
     }).compile();
 
