@@ -52,7 +52,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         StreamSlot,
         WaveSchedule,
       ],
-      synchronize: false, // Use migrations instead of auto-sync
+      synchronize: true, // Auto-sync DB schema in dev
       migrations: ['dist/migrations/*{.ts,.js}'],
       logging: false,
     }),

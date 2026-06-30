@@ -33,6 +33,7 @@ import { WaveSchedule } from './entities/wave-schedule.entity';
 import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
 import { BookNextAvailableDto } from './dto/book-next-available.dto';
+import { NotificationService } from '../notification/notification.service';
 
 // ─── Shared mock factory ─────────────────────────────────────────────────────
 const mockRepo = () => ({
@@ -95,6 +96,7 @@ describe('AppointmentService.bookNextAvailableSlot()', () => {
         { provide: getRepositoryToken(WaveSchedule), useFactory: mockRepo },
         { provide: getRepositoryToken(RecurringAvailability), useFactory: mockRepo },
         { provide: getRepositoryToken(CustomAvailability), useFactory: mockRepo },
+        { provide: NotificationService, useValue: { createNotification: jest.fn() } },
       ],
     }).compile();
 
