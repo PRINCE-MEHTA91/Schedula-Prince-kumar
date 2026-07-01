@@ -73,6 +73,10 @@ export class Appointment {
   @Column({ type: 'int', nullable: true })
   tokenNumber: number | null;
 
+  // Tracks whether the 24-hour reminder notification has been sent for this appointment
+  @Column({ default: false })
+  isReminderSent: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

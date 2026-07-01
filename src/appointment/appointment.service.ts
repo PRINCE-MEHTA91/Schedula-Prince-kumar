@@ -1185,7 +1185,6 @@ export class AppointmentService {
 
     const { startMin: consultStartMin, endMin: consultEndMin } = parsedAvail;
 
-    // Guard against nonsensical consultation windows stored in the DB
     if (consultStartMin >= consultEndMin) {
       throw new BadRequestException(
         'Doctor has invalid consultation timings configured (start must be before end).',
@@ -1197,11 +1196,8 @@ export class AppointmentService {
     // Booking closes 1 hour  (60  min) before consultation end
     const bookingOpenMin  = consultStartMin - 120;
     const bookingCloseMin = consultEndMin   - 60;
-
-    // Current time expressed as minutes since midnight (server local time)
     const currentMin = now.getHours() * 60 + now.getMinutes();
 
-    // Helper: format a minute-count back to "HH:MM"
     const toHHMM = (min: number): string => {
       const h = Math.floor(min / 60);
       const m = min % 60;
