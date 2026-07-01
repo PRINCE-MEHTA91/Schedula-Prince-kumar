@@ -75,6 +75,17 @@ export class AppointmentService {
         throw new NotFoundException(`Doctor with ID ${dto.doctorId} not found.`);
       }
 
+    // Step 3: Enforce Day 16 (today-only) + Day 19 (booking window) rules
+    this.validateBookingWindow(doctor, dto.date);
+
+    // Step 3b: Check appointment slot is for a future time today
+    const appointmentDateTime = new Date(`${dto.date}T${dto.startTime}:00`);
+    const now = new Date();
+    if (appointmentDateTime <= now) {
+      throw new BadRequestException(
+        'Appointment must be scheduled for a future date and time.',
+      );
+    }
       // Step 2: Check patient profile exists
       const patient = await this.patientRepo.findOne({
         where: { userId: patientUserId },
@@ -1151,6 +1162,96 @@ export class AppointmentService {
     }
 
     return slots;
+  }
+
+  /**
+   * Day 16 + Day 19 Booking Window Validation
+   *
+   * Business Rules:
+   *  - Appointments can only be booked for **today's date** (Day 16).
+   *  - The booking window is derived from the doctor's consultation schedule:
+   *      • Opens  : 2 hours before consultation start time
+   *      • Closes : 1 hour  before consultation end time
+   *
+   * Example: Doctor consults 09:00–12:00
+   *   → Booking opens  at 07:00
+   *   → Booking closes at 11:00
+   *
+   * Throws BadRequestException with a clear message for every failure case.
+   */
+  private validateBookingWindow(doctor: DoctorProfile, requestedDate: string): void {
+    // ── Validate date format ────────────────────────────────────────────────
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD.');
+    }
+
+    // ── Day 16: Today-only booking ──────────────────────────────────────────
+    const now = new Date();
+    const todayStr = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (requestedDate !== todayStr) {
+      throw new BadRequestException(
+        `Appointments can only be booked for today's date (${todayStr}). Received: ${requestedDate}.`,
+      );
+    }
+
+    // ── Parse consultation times from availabilityHours ─────────────────────
+    const parsedAvail = this.parseAvailability(doctor.availabilityHours);
+    if (!parsedAvail) {
+      throw new BadRequestException(
+        'Doctor has no valid availability hours set.',
+      );
+    }
+
+    const { startMin: consultStartMin, endMin: consultEndMin } = parsedAvail;
+
+    // Guard against nonsensical consultation windows stored in the DB
+    if (consultStartMin >= consultEndMin) {
+      throw new BadRequestException(
+        'Doctor has invalid consultation timings configured (start must be before end).',
+      );
+    }
+
+    // ── Day 19: Derive booking window ───────────────────────────────────────
+    // Booking opens  2 hours (120 min) before consultation start
+    // Booking closes 1 hour  (60  min) before consultation end
+    const bookingOpenMin  = consultStartMin - 120;
+    const bookingCloseMin = consultEndMin   - 60;
+
+    // Current time expressed as minutes since midnight (server local time)
+    const currentMin = now.getHours() * 60 + now.getMinutes();
+
+    // Helper: format a minute-count back to "HH:MM"
+    const toHHMM = (min: number): string => {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    if (currentMin < bookingOpenMin) {
+      throw new BadRequestException(
+        `Booking window is not open yet. It opens at ${toHHMM(bookingOpenMin)} ` +
+        `(2 hours before the doctor's consultation start at ${toHHMM(consultStartMin)}).`,
+      );
+    }
+
+    if (currentMin >= bookingCloseMin) {
+      throw new BadRequestException(
+        `Booking window has closed. It closed at ${toHHMM(bookingCloseMin)} ` +
+        `(1 hour before the doctor's consultation end at ${toHHMM(consultEndMin)}).`,
+      );
+    }
+
+    // ── Doctor unavailability flag ───────────────────────────────────────────
+    if (!doctor.isAvailable) {
+      throw new BadRequestException(
+        'Doctor is currently not available for new appointments.',
+      );
+    }
   }
 
   private parseAvailability(availabilityStr: string) {
