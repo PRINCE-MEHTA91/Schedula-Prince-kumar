@@ -34,11 +34,14 @@ export class UpdateNotificationTypes1782361622048 implements MigrationInterface 
         await queryRunner.query(`ALTER TABLE "recurring_availability" DROP COLUMN "dayOfWeek"`);
         await queryRunner.query(`ALTER TABLE "recurring_availability" ADD "dayOfWeek" "public"."recurring_availability_dayofweek_enum" NOT NULL`);
         await queryRunner.query(`ALTER TABLE "appointments" DROP COLUMN "appointmentDate"`);
-        await queryRunner.query(`ALTER TABLE "appointments" ADD "appointmentDate" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "appointments" ADD "appointmentDate" character varying NOT NULL DEFAULT '2026-06-26'`);
+        await queryRunner.query(`ALTER TABLE "appointments" ALTER COLUMN "appointmentDate" DROP DEFAULT`);
         await queryRunner.query(`ALTER TABLE "appointments" DROP COLUMN "startTime"`);
-        await queryRunner.query(`ALTER TABLE "appointments" ADD "startTime" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "appointments" ADD "startTime" character varying NOT NULL DEFAULT '10:00'`);
+        await queryRunner.query(`ALTER TABLE "appointments" ALTER COLUMN "startTime" DROP DEFAULT`);
         await queryRunner.query(`ALTER TABLE "appointments" DROP COLUMN "endTime"`);
-        await queryRunner.query(`ALTER TABLE "appointments" ADD "endTime" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "appointments" ADD "endTime" character varying NOT NULL DEFAULT '10:30'`);
+        await queryRunner.query(`ALTER TABLE "appointments" ALTER COLUMN "endTime" DROP DEFAULT`);
         await queryRunner.query(`ALTER TYPE "public"."appointments_status_enum" RENAME TO "appointments_status_enum_old"`);
         await queryRunner.query(`CREATE TYPE "public"."appointments_status_enum" AS ENUM('CONFIRMED', 'CANCELLED')`);
         await queryRunner.query(`ALTER TABLE "appointments" ALTER COLUMN "status" DROP DEFAULT`);
@@ -50,7 +53,8 @@ export class UpdateNotificationTypes1782361622048 implements MigrationInterface 
         await queryRunner.query(`ALTER TABLE "notifications" ALTER COLUMN "type" TYPE "public"."notifications_type_enum" USING "type"::"text"::"public"."notifications_type_enum"`);
         await queryRunner.query(`DROP TYPE "public"."notification_type_enum_old"`);
         await queryRunner.query(`ALTER TABLE "notifications" DROP COLUMN "title"`);
-        await queryRunner.query(`ALTER TABLE "notifications" ADD "title" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "notifications" ADD "title" character varying NOT NULL DEFAULT 'Notification'`);
+        await queryRunner.query(`ALTER TABLE "notifications" ALTER COLUMN "title" DROP DEFAULT`);
         await queryRunner.query(`ALTER TABLE "notifications" DROP COLUMN "createdAt"`);
         await queryRunner.query(`ALTER TABLE "notifications" ADD "createdAt" TIMESTAMP NOT NULL DEFAULT now()`);
         await queryRunner.query(`ALTER TABLE "recurring_availability" ADD CONSTRAINT "FK_988d39de6521504d5dc9ac0b9f5" FOREIGN KEY ("doctorProfileId") REFERENCES "doctor_profiles"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);

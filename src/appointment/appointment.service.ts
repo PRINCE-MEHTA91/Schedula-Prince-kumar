@@ -66,23 +66,14 @@ export class AppointmentService {
   // ─── 1. Book Appointment (PATIENT only) ──────────────────────────────────────
 
   async bookAppointment(patientUserId: number, dto: BookAppointmentDto) {
-    // Step 1: Check doctor exists
-    const doctor = await this.doctorRepo.findOne({
-      where: { id: dto.doctorId },
-    });
-    if (!doctor) {
-      throw new NotFoundException(`Doctor with ID ${dto.doctorId} not found.`);
-    }
-
-    // Step 2: Check patient profile exists
-    const patient = await this.patientRepo.findOne({
-      where: { userId: patientUserId },
-    });
-    if (!patient) {
-      throw new NotFoundException(
-        'Patient profile not found. Please complete your profile first.',
-      );
-    }
+    try {
+      // Step 1: Check doctor exists
+      const doctor = await this.doctorRepo.findOne({
+        where: { id: dto.doctorId },
+      });
+      if (!doctor) {
+        throw new NotFoundException(`Doctor with ID ${dto.doctorId} not found.`);
+      }
 
     // Step 3: Enforce Day 16 (today-only) + Day 19 (booking window) rules
     this.validateBookingWindow(doctor, dto.date);
@@ -95,109 +86,142 @@ export class AppointmentService {
         'Appointment must be scheduled for a future date and time.',
       );
     }
+      // Step 2: Check patient profile exists
+      const patient = await this.patientRepo.findOne({
+        where: { userId: patientUserId },
+      });
+      if (!patient) {
+        throw new NotFoundException(
+          'Patient profile not found. Please complete your profile first.',
+        );
+      }
 
-    // Step 4: Validate slot is within doctor's availability hours
-    const parsedAvail = this.parseAvailability(doctor.availabilityHours);
-    if (!parsedAvail) {
-      throw new BadRequestException(
-        'Doctor has no valid availability hours set.',
-      );
-    }
+      // Step 3: Booking Window — only today's date is allowed (Iteration 1)
+      const todayStr = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD" in local time
+      if (dto.date < todayStr) {
+        throw new BadRequestException(
+          'Booking for past dates is not allowed. Please book for today.',
+        );
+      }
+      if (dto.date > todayStr) {
+        throw new BadRequestException(
+          'Booking for future dates is not allowed. Appointments can only be booked for today.',
+        );
+      }
 
-    const { startDay, endDay, startMin, endMin } = parsedAvail;
-    const requestDay = appointmentDateTime.getDay(); // 0 for Sunday, 1 for Monday
+      const appointmentDateTime = new Date(`${dto.date}T${dto.startTime}:00`);
+      const now = new Date();
+      if (appointmentDateTime <= now) {
+        throw new BadRequestException(
+          'The requested time slot has already passed. Please choose a later time today.',
+        );
+      }
 
-    if (!this.isDayInRange(requestDay, startDay, endDay)) {
-      throw new BadRequestException(
-        `Doctor is not available on this day of the week.`,
-      );
-    }
+      // Step 4: Validate slot is within doctor's availability hours
+      const parsedAvail = this.parseAvailability(doctor.availabilityHours);
+      if (!parsedAvail) {
+        throw new BadRequestException(
+          'Doctor has no valid availability hours set.',
+        );
+      }
 
-    const [reqHour, reqMinute] = dto.startTime.split(':').map(Number);
-    const [reqEndHour, reqEndMinute] = dto.endTime.split(':').map(Number);
-    const reqStartMin = reqHour * 60 + reqMinute;
-    const reqEndMin = reqEndHour * 60 + reqEndMinute;
+      const { startDay, endDay, startMin, endMin } = parsedAvail;
+      const requestDay = appointmentDateTime.getDay(); // 0 for Sunday, 1 for Monday
 
-    if (reqStartMin < startMin || reqEndMin > endMin) {
-      throw new BadRequestException(
-        `Slot ${dto.startTime}-${dto.endTime} is outside doctor's availability hours.`,
-      );
-    }
+      if (!this.isDayInRange(requestDay, startDay, endDay)) {
+        throw new BadRequestException(
+          `Doctor is not available on this day of the week.`,
+        );
+      }
 
-    let tokenNumber: number | null = null;
+      const [reqHour, reqMinute] = dto.startTime.split(':').map(Number);
+      const [reqEndHour, reqEndMinute] = dto.endTime.split(':').map(Number);
+      const reqStartMin = reqHour * 60 + reqMinute;
+      const reqEndMin = reqEndHour * 60 + reqEndMinute;
 
-    if (doctor.schedulingType === 'WAVE') {
-      const waveAppointments = await this.appointmentRepo.find({
-        where: {
-          doctorId: dto.doctorId,
-          date: dto.date,
-          startTime: dto.startTime,
-          endTime: dto.endTime,
-          status: AppointmentStatus.BOOKED,
-        },
+      if (reqStartMin < startMin || reqEndMin > endMin) {
+        throw new BadRequestException(
+          `Slot ${dto.startTime}-${dto.endTime} is outside doctor's availability hours.`,
+        );
+      }
+
+      let tokenNumber: number | null = null;
+
+      if (doctor.schedulingType === 'WAVE') {
+        const waveAppointments = await this.appointmentRepo.find({
+          where: {
+            doctorId: dto.doctorId,
+            date: dto.date,
+            startTime: dto.startTime,
+            endTime: dto.endTime,
+            status: AppointmentStatus.BOOKED,
+          },
+        });
+
+        const maxCapacity = doctor.maxPatientsPerWave || 5;
+        if (waveAppointments.length >= maxCapacity) {
+          const nextAvailable = await this.getNextAvailableSlots(dto.doctorId, dto.date);
+          throw new ConflictException({
+            message: 'Requested wave is full. Suggest the next available day slot',
+            suggestedDate: nextAvailable.date,
+            suggestedSlots: nextAvailable.slots
+          });
+        }
+        
+        tokenNumber = waveAppointments.length + 1;
+      } else {
+        const existing = await this.appointmentRepo.findOne({
+          where: {
+            doctorId: dto.doctorId,
+            date: dto.date,
+            startTime: dto.startTime,
+            status: AppointmentStatus.BOOKED,
+          },
+        });
+        if (existing) {
+          const nextAvailable = await this.getNextAvailableSlots(dto.doctorId, dto.date);
+          throw new ConflictException({
+            message: 'Requested slot unavailable. Suggest the next available day slot',
+            suggestedDate: nextAvailable.date,
+            suggestedSlots: nextAvailable.slots
+          });
+        }
+      }
+
+      const appointment = this.appointmentRepo.create({
+        doctorId: dto.doctorId,
+        patientId: patient.id,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        status: AppointmentStatus.BOOKED,
+        tokenNumber,
       });
 
-      const maxCapacity = doctor.maxPatientsPerWave || 5;
-      if (waveAppointments.length >= maxCapacity) {
-        const nextAvailable = await this.getNextAvailableSlots(dto.doctorId, dto.date);
-        throw new ConflictException({
-          message: 'Requested wave is full. Suggest the next available day slot',
-          suggestedDate: nextAvailable.date,
-          suggestedSlots: nextAvailable.slots
-        });
-      }
-      
-      tokenNumber = waveAppointments.length + 1;
-    } else {
-      // Step 5: Check this exact slot is not already booked (same doctor + date + startTime)
-      const existing = await this.appointmentRepo.findOne({
-        where: {
-          doctorId: dto.doctorId,
-          date: dto.date,
-          startTime: dto.startTime,
-          status: AppointmentStatus.BOOKED,
-        },
+      const saved = await this.appointmentRepo.save(appointment);
+
+      const bookedDateLabel = new Date(`${dto.date}T00:00:00`).toLocaleDateString(
+        'en-IN',
+        { day: 'numeric', month: 'long' },
+      );
+      await this.notificationService.createNotification({
+        patientId: patient.id,
+        type: NotificationType.APPOINTMENT_BOOKED,
+        title: 'Appointment Booked',
+        message: `Your appointment with Dr. ${doctor.fullName} has been booked successfully for ${bookedDateLabel} at ${dto.startTime}.`,
       });
-      if (existing) {
-        const nextAvailable = await this.getNextAvailableSlots(dto.doctorId, dto.date);
-        throw new ConflictException({
-          message: 'Requested slot unavailable. Suggest the next available day slot',
-          suggestedDate: nextAvailable.date,
-          suggestedSlots: nextAvailable.slots
-        });
+
+      return {
+        message: 'Appointment booked successfully',
+        appointment: saved,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof ConflictException || error instanceof ForbiddenException) {
+        throw error;
       }
+      const { InternalServerErrorException } = require('@nestjs/common');
+      throw new InternalServerErrorException(`500_TRACE: ${error.message} - Stack: ${error.stack}`);
     }
-
-    // All checks passed — create the appointment
-    const appointment = this.appointmentRepo.create({
-      doctorId: dto.doctorId,
-      patientId: patient.id,
-      date: dto.date,
-      startTime: dto.startTime,
-      endTime: dto.endTime,
-      status: AppointmentStatus.BOOKED,
-      tokenNumber, // will be null for STREAM
-    });
-
-    const saved = await this.appointmentRepo.save(appointment);
-
-    // ── Auto-notification: APPOINTMENT_BOOKED ───────────────────────────────
-    // Format date for human-readable message e.g. "25 June"
-    const bookedDateLabel = new Date(`${dto.date}T00:00:00`).toLocaleDateString(
-      'en-IN',
-      { day: 'numeric', month: 'long' },
-    );
-    await this.notificationService.createNotification({
-      patientId: patient.id,
-      type: NotificationType.APPOINTMENT_BOOKED,
-      title: 'Appointment Booked',
-      message: `Your appointment with Dr. ${doctor.fullName} has been booked successfully for ${bookedDateLabel} at ${dto.startTime}.`,
-    });
-
-    return {
-      message: 'Appointment booked successfully',
-      appointment: saved,
-    };
   }
 
   // ─── 2. Get Patient's Own Appointments ───────────────────────────────────────
@@ -512,7 +536,7 @@ export class AppointmentService {
       startTime: appt.startTime,
       endTime: appt.endTime,
       status: appt.status,
-      schedulingType: appt.schedulingType || doctor.schedulingType || 'STREAM',
+      schedulingType: doctor.schedulingType || 'STREAM',
       patient: appt.patient ? {
         id: appt.patient.id,
         fullName: appt.patient.fullName,
@@ -1231,6 +1255,8 @@ export class AppointmentService {
   }
 
   private parseAvailability(availabilityStr: string) {
+    if (!availabilityStr) return null;
+
     // Expected format: "Mon-Sat 10am-4pm" or "Mon-Fri 09:00am-05:00pm"
     // Regex matches: 1=startDay, 2=endDay, 3=startTime, 4=endTime
     const regex =

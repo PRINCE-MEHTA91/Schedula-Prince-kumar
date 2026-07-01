@@ -152,6 +152,31 @@ describe('AppointmentService', () => {
     findOne: jest.fn().mockResolvedValue(null),
     find: jest.fn().mockResolvedValue([]),
     save: jest.fn(),
+import { PatientProfile, Gender } from '../patient/entities/patient-profile.entity';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/enums/notification-type.enum';
+import { StreamSlot } from './entities/stream-slot.entity';
+import { WaveSchedule } from './entities/wave-schedule.entity';
+import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
+import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
+import { NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+
+describe('AppointmentService', () => {
+  let service: AppointmentService;
+  let appointmentRepo: any;
+  let doctorRepo: any;
+  let patientRepo: any;
+  let notificationService: any;
+  
+  const mockDoctorRepo = {
+    findOne: jest.fn(),
+  };
+
+  const mockAppointmentRepo = {
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest.fn().mockImplementation((appointment) => Promise.resolve({ id: 1, ...appointment })),
+    findOne: jest.fn(),
+    find: jest.fn(),
   };
   const mockWaveScheduleRepo = {
     findOne: jest.fn().mockResolvedValue(null),
@@ -162,7 +187,12 @@ describe('AppointmentService', () => {
   const mockCustomAvailRepo    = { find: jest.fn().mockResolvedValue([]) };
   const mockNotificationService = { createNotification: jest.fn() };
 
+  const mockNotificationService = {
+    createNotification: jest.fn(),
+  };
+
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppointmentService,
@@ -174,6 +204,14 @@ describe('AppointmentService', () => {
         { provide: getRepositoryToken(RecurringAvailability),  useValue: mockRecurringAvailRepo },
         { provide: getRepositoryToken(CustomAvailability),     useValue: mockCustomAvailRepo },
         { provide: NotificationService,                        useValue: mockNotificationService },
+        { provide: getRepositoryToken(Appointment), useValue: mockAppointmentRepo },
+        { provide: getRepositoryToken(DoctorProfile), useValue: mockDoctorRepo },
+        { provide: getRepositoryToken(PatientProfile), useValue: mockPatientRepo },
+        { provide: getRepositoryToken(StreamSlot), useValue: {} },
+        { provide: getRepositoryToken(WaveSchedule), useValue: {} },
+        { provide: getRepositoryToken(RecurringAvailability), useValue: {} },
+        { provide: getRepositoryToken(CustomAvailability), useValue: {} },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     }).compile();
 
@@ -196,6 +234,24 @@ describe('AppointmentService', () => {
       startTime,
       endTime,
     });
+    beforeEach(() => {
+      jest.useFakeTimers();
+      // Set system time to 8:00 AM local time on Friday, June 24, 2050
+      jest.setSystemTime(new Date(2050, 5, 24, 8, 0, 0));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should successfully book an appointment for today and create a notification', async () => {
+      const patientUserId = 1;
+      const dto = {
+        doctorId: 2,
+        date: '2050-06-24', // Today
+        startTime: '10:00',
+        endTime: '10:30',
+      };
 
     // ── Day 19: Booking window tests ────────────────────────────────────
 
@@ -245,6 +301,50 @@ describe('AppointmentService', () => {
       await expect(service.bookAppointment(10, dto)).rejects.toThrow(
         /Booking window has closed/,
       );
+      const result = await service.bookAppointment(patientUserId, dto);
+
+      expect(result.message).toBe('Appointment booked successfully');
+      expect(appointmentRepo.save).toHaveBeenCalled();
+      expect(notificationService.createNotification).toHaveBeenCalledWith(expect.objectContaining({
+        patientId: 3,
+        type: NotificationType.APPOINTMENT_BOOKED,
+        title: 'Appointment Booked',
+        message: expect.stringContaining('Your appointment with Dr. John Doe has been booked successfully for 24 June at 10:00.')
+      }));
+    });
+
+    it('should throw BadRequestException when booking for a past date', async () => {
+      const patientUserId = 1;
+      const dto = {
+        doctorId: 2,
+        date: '2050-06-23', // Past date
+        startTime: '10:00',
+        endTime: '10:30',
+      };
+
+      doctorRepo.findOne.mockResolvedValue({ id: 2, fullName: 'John Doe' });
+      patientRepo.findOne.mockResolvedValue({ id: 3, userId: patientUserId });
+
+      await expect(service.bookAppointment(patientUserId, dto))
+        .rejects
+        .toThrow(new BadRequestException('Booking for past dates is not allowed. Please book for today.'));
+    });
+
+    it('should throw BadRequestException when booking for a future date', async () => {
+      const patientUserId = 1;
+      const dto = {
+        doctorId: 2,
+        date: '2050-06-25', // Future date
+        startTime: '10:00',
+        endTime: '10:30',
+      };
+
+      doctorRepo.findOne.mockResolvedValue({ id: 2, fullName: 'John Doe' });
+      patientRepo.findOne.mockResolvedValue({ id: 3, userId: patientUserId });
+
+      await expect(service.bookAppointment(patientUserId, dto))
+        .rejects
+        .toThrow(new BadRequestException('Booking for future dates is not allowed. Appointments can only be booked for today.'));
     });
 
     it('[Day 19] should allow booking when current time is WITHIN the booking window', async () => {
@@ -298,6 +398,15 @@ describe('AppointmentService', () => {
       await expect(service.bookAppointment(10, dto)).rejects.toThrow(
         /only be booked for today/,
       );
+
+      expect(result.message).toBe('Appointment updated successfully');
+      expect(appointmentRepo.save).toHaveBeenCalled();
+      expect(notificationService.createNotification).toHaveBeenCalledWith(expect.objectContaining({
+        patientId: 3,
+        type: NotificationType.APPOINTMENT_RESCHEDULED,
+        title: 'Appointment Rescheduled',
+        message: expect.stringContaining('Your appointment has been rescheduled to 27 June at 14:30.')
+      }));
     });
 
     it('[Day 16] should reject booking for a past date', async () => {
@@ -319,6 +428,23 @@ describe('AppointmentService', () => {
       await expect(service.bookAppointment(10, dto)).rejects.toThrow(
         BadRequestException,
       );
+      appointmentRepo.findOne.mockResolvedValue(mockAppointment);
+      patientRepo.findOne.mockResolvedValue({ id: 3, userId: patientUserId });
+
+      const result = await service.cancelAppointment(
+        appointmentId,
+        patientUserId,
+      );
+
+      expect(result.message).toBe('Appointment cancelled successfully');
+      expect(mockAppointment.status).toBe(AppointmentStatus.CANCELLED);
+      expect(appointmentRepo.save).toHaveBeenCalled();
+      expect(notificationService.createNotification).toHaveBeenCalledWith(expect.objectContaining({
+        patientId: 3,
+        type: NotificationType.APPOINTMENT_CANCELLED,
+        title: 'Appointment Cancelled',
+        message: expect.stringContaining('Your appointment scheduled on 24 June at 10:00 has been cancelled.')
+      }));
     });
 
     // ── Edge Cases ───────────────────────────────────────────────────────
@@ -415,11 +541,31 @@ describe('AppointmentService', () => {
       expect(result.message).toBe('Appointments fetched successfully');
       expect(result.appointments).toHaveLength(1);
       expect(result.appointments[0].id).toBe(1);
+      expect(result.appointments[0].schedulingType).toBe('STREAM');
     });
 
     it('should support filtering appointments by date', async () => {
       mockDoctorRepo.findOne.mockResolvedValue(mockDoctor);
       mockAppointmentRepo.find.mockResolvedValue([]);
+  describe('cancelAppointmentByDoctor', () => {
+    it('should throw NotFoundException if doctor does not exist', async () => {
+      doctorRepo.findOne.mockResolvedValue(null);
+      await expect(
+        service.cancelAppointmentByDoctor(1, 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should successfully cancel appointment as a doctor and create notification', async () => {
+      doctorRepo.findOne.mockResolvedValue({ id: 2, userId: 1, fullName: 'Dr. Smith' });
+      const mockAppointment = {
+        id: 1,
+        doctorId: 2,
+        patientId: 3,
+        date: '2026-06-25',
+        startTime: '10:00',
+        status: AppointmentStatus.BOOKED,
+        patient: { id: 3 },
+      };
 
       await service.getDoctorAppointments(101, todayStr());
 
@@ -436,6 +582,51 @@ describe('AppointmentService', () => {
         BadRequestException,
       );
     });
+      const result = await service.cancelAppointmentByDoctor(1, 1);
+      expect(result.message).toBe('Appointment cancelled successfully');
+      expect(mockAppointment.status).toBe(AppointmentStatus.CANCELLED);
+      expect(appointmentRepo.save).toHaveBeenCalled();
+      expect(notificationService.createNotification).toHaveBeenCalledWith(expect.objectContaining({
+        patientId: 3,
+        type: NotificationType.APPOINTMENT_CANCELLED,
+        title: 'Appointment Cancelled',
+        message: expect.stringContaining('has been cancelled by Dr. Dr. Smith')
+      }));
+    });
+
+    it('should throw ForbiddenException if appointment belongs to another doctor', async () => {
+      doctorRepo.findOne.mockResolvedValue({ id: 2, userId: 1 });
+      const mockAppointment = {
+        id: 1,
+        doctorId: 3, // Different doctor ID
+        patientId: 3,
+        status: AppointmentStatus.BOOKED,
+      };
+
+      appointmentRepo.findOne.mockResolvedValue(mockAppointment);
+      await expect(
+        service.cancelAppointmentByDoctor(1, 1),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const mockDoctor = { id: 1, userId: 101, isAvailable: true, availabilityHours: 'Mon-Fri 09:00am-05:00pm' };
+  const mockPatient = { id: 1, userId: 201, fullName: 'John Doe', age: 30, gender: Gender.MALE, contactDetails: '123' };
+  
+  const mockAppointment = {
+    id: 1,
+    doctorId: 1,
+    patientId: 1,
+    date: '2026-06-25',
+    startTime: '10:00',
+    endTime: '10:30',
+    status: AppointmentStatus.CONFIRMED,
+    patient: mockPatient,
+    doctor: mockDoctor,
+  };
 
     it('should return proper message when no appointments found', async () => {
       mockDoctorRepo.findOne.mockResolvedValue(mockDoctor);
@@ -444,6 +635,15 @@ describe('AppointmentService', () => {
       const result = await service.getDoctorAppointments(101);
       expect(result.message).toBe('No appointments found.');
       expect(result.appointments).toEqual([]);
+
+      expect(mockDoctorRepo.findOne).toHaveBeenCalledWith({ where: { userId: 101 } });
+      expect(mockAppointmentRepo.find).toHaveBeenCalledWith({
+        where: { doctorId: 1 },
+        relations: { patient: true },
+        order: { date: 'ASC', startTime: 'ASC' },
+      });
+      expect(result.appointments).toHaveLength(1);
+      expect(result.appointments[0].schedulingType).toBe('STREAM');
     });
   });
 
@@ -467,6 +667,10 @@ describe('AppointmentService', () => {
       mockAppointmentRepo.save.mockResolvedValue({
         ...mockAppointment,
         status: AppointmentStatus.CANCELLED,
+      expect(mockAppointmentRepo.find).toHaveBeenCalledWith({
+        where: { doctorId: 1, date: '2026-06-25' },
+        relations: { patient: true },
+        order: { date: 'ASC', startTime: 'ASC' },
       });
 
       const result = await service.cancelAppointmentByDoctor(1, 101);
@@ -536,6 +740,11 @@ describe('AppointmentService', () => {
       });
 
       const result = await service.cancelAppointment(1, 10);
+      expect(mockAppointmentRepo.findOne).toHaveBeenCalledWith({ where: { id: 1 }, relations: { patient: true } });
+      expect(mockDoctorRepo.findOne).toHaveBeenCalledWith({ where: { userId: 101 } });
+      expect(mockAppointmentRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+        status: AppointmentStatus.CANCELLED
+      }));
       expect(result.message).toBe('Appointment cancelled successfully');
     });
 
@@ -617,4 +826,5 @@ describe('AppointmentService', () => {
       expect(result.slots.length).toBeGreaterThan(0);
     });
   });
+});
 });

@@ -22,18 +22,18 @@ async function request(method, path, body, token) {
   return { status: res.status, data };
 }
 
-function log(label, status, data) {
+function log1(label, status, data) {
   const icon = status >= 200 && status < 300 ? '✅' : status >= 400 ? '❌' : '⚠️';
-  console.log(`\n${icon} [${status}] ${label}`);
-  console.log(JSON.stringify(data, null, 2));
+  console.log1(`\n${icon} [${status}] ${label}`);
+  console.log1(JSON.stringify(data, null, 2));
 }
 
 // ── Test Runner ──────────────────────────────────────────────────────────────
 
 async function runTests() {
-  console.log('='.repeat(60));
-  console.log('  Appointment Booking API Tests');
-  console.log('='.repeat(60));
+  console.log1('='.repeat(60));
+  console.log1('  Appointment Booking API Tests');
+  console.log1('='.repeat(60));
 
   let patientToken = '';
   let doctorToken = '';
@@ -41,26 +41,26 @@ async function runTests() {
   let doctorProfileId = null;
 
   // ─── Step 1: Sign up a patient ─────────────────────────────────────────────
-  console.log('\n📋 STEP 1: Create Patient Account');
+  console.log1('\n📋 STEP 1: Create Patient Account');
   const patientSignup = await request('POST', '/auth/signup', {
     name: 'Test Patient',
     email: `patient_${Date.now()}@test.com`,
     password: 'patient123',
     role: 'PATIENT',
   });
-  log('Patient signup', patientSignup.status, patientSignup.data);
+  log1('Patient signup', patientSignup.status, patientSignup.data);
 
   // ─── Step 2: Log in as patient ──────────────────────────────────────────────
-  console.log('\n📋 STEP 2: Login as Patient');
+  console.log1('\n📋 STEP 2: Login as Patient');
   const patientLogin = await request('POST', '/auth/login', {
     email: patientSignup.data.user?.email,
     password: 'patient123',
   });
   patientToken = patientLogin.data.access_token;
-  log('Patient login', patientLogin.status, { token: patientToken ? 'received' : 'missing' });
+  log1('Patient login', patientLogin.status, { token: patientToken ? 'received' : 'missing' });
 
   // ─── Step 3: Create patient profile ────────────────────────────────────────
-  console.log('\n📋 STEP 3: Create Patient Profile');
+  console.log1('\n📋 STEP 3: Create Patient Profile');
   const patientProfile = await request(
     'POST',
     '/patient/profile',
@@ -73,10 +73,10 @@ async function runTests() {
     },
     patientToken,
   );
-  log('Create patient profile', patientProfile.status, patientProfile.data);
+  log1('Create patient profile', patientProfile.status, patientProfile.data);
 
   // ─── Step 4: Sign up a doctor ──────────────────────────────────────────────
-  console.log('\n📋 STEP 4: Create Doctor Account');
+  console.log1('\n📋 STEP 4: Create Doctor Account');
   const doctorEmail = `doctor_${Date.now()}@test.com`;
   const doctorSignup = await request('POST', '/auth/signup', {
     name: 'Dr. Test',
@@ -84,19 +84,19 @@ async function runTests() {
     password: 'doctor123',
     role: 'DOCTOR',
   });
-  log('Doctor signup', doctorSignup.status, doctorSignup.data);
+  log1('Doctor signup', doctorSignup.status, doctorSignup.data);
 
   // ─── Step 5: Log in as doctor ──────────────────────────────────────────────
-  console.log('\n📋 STEP 5: Login as Doctor');
+  console.log1('\n📋 STEP 5: Login as Doctor');
   const doctorLogin = await request('POST', '/auth/login', {
     email: doctorEmail,
     password: 'doctor123',
   });
   doctorToken = doctorLogin.data.access_token;
-  log('Doctor login', doctorLogin.status, { token: doctorToken ? 'received' : 'missing' });
+  log1('Doctor login', doctorLogin.status, { token: doctorToken ? 'received' : 'missing' });
 
   // ─── Step 6: Create doctor profile ─────────────────────────────────────────
-  console.log('\n📋 STEP 6: Create Doctor Profile');
+  console.log1('\n📋 STEP 6: Create Doctor Profile');
   const doctorProfile = await request(
     'POST',
     '/doctor/profile',
@@ -111,59 +111,59 @@ async function runTests() {
     },
     doctorToken,
   );
-  log('Create doctor profile', doctorProfile.status, doctorProfile.data);
+  log1('Create doctor profile', doctorProfile.status, doctorProfile.data);
   doctorProfileId = doctorProfile.data.profile?.id;
-  console.log('→ Doctor Profile ID:', doctorProfileId);
+  console.log1('→ Doctor Profile ID:', doctorProfileId);
 
   if (!doctorProfileId) {
-    console.log('\n⚠️  Could not get doctorProfileId — some tests will fail');
+    console.log1('\n⚠️  Could not get doctorProfileId — some tests will fail');
   }
 
   // ─── Step 7: Get available doctors (patient sees doctor list) ──────────────
-  console.log('\n📋 STEP 7: Patient browses doctors');
+  console.log1('\n📋 STEP 7: Patient browses doctors');
   const doctors = await request('GET', '/doctor', null, patientToken);
-  log('Get all doctors', doctors.status, { count: doctors.data.doctors?.length });
+  log1('Get all doctors', doctors.status, { count: doctors.data.doctors?.length });
 
   // Use first doctor if we didn't get doctorProfileId above
   if (!doctorProfileId && doctors.data.doctors?.length > 0) {
     doctorProfileId = doctors.data.doctors[0].id;
-    console.log('→ Using Doctor Profile ID:', doctorProfileId);
+    console.log1('→ Using Doctor Profile ID:', doctorProfileId);
   }
 
   // ─── Step 8: BOOK an appointment (happy path) ───────────────────────────────
-  console.log('\n📋 STEP 8: Book Appointment (should succeed)');
+  console.log1('\n📋 STEP 8: Book Appointment (should succeed)');
   const bookRes = await request(
     'POST',
     '/appointment',
     {
       doctorId: doctorProfileId,
-      date: '2026-12-20',
+      date: new Date().toLocaleDateString('en-CA'),
       startTime: '10:00',
       endTime: '10:15',
     },
     patientToken,
   );
-  log('Book appointment', bookRes.status, bookRes.data);
+  log1('Book appointment', bookRes.status, bookRes.data);
   appointmentId = bookRes.data.appointment?.id;
-  console.log('→ Appointment ID:', appointmentId);
+  console.log1('→ Appointment ID:', appointmentId);
 
   // ─── Step 9: DUPLICATE booking — same slot (should fail with 409) ──────────
-  console.log('\n📋 STEP 9: Duplicate booking (should fail 409)');
+  console.log1('\n📋 STEP 9: Duplicate booking (should fail 409)');
   const dupRes = await request(
     'POST',
     '/appointment',
     {
       doctorId: doctorProfileId,
-      date: '2026-12-20',
+      date: new Date().toLocaleDateString('en-CA'),
       startTime: '10:00',
       endTime: '10:15',
     },
     patientToken,
   );
-  log('Duplicate booking', dupRes.status, dupRes.data);
+  log1('Duplicate booking', dupRes.status, dupRes.data);
 
   // ─── Step 10: Past date booking (should fail with 400) ─────────────────────
-  console.log('\n📋 STEP 10: Past date booking (should fail 400)');
+  console.log1('\n📋 STEP 10: Past date booking (should fail 400)');
   const pastRes = await request(
     'POST',
     '/appointment',
@@ -175,104 +175,105 @@ async function runTests() {
     },
     patientToken,
   );
-  log('Past date booking', pastRes.status, pastRes.data);
+  log1('Past date booking', pastRes.status, pastRes.data);
 
   // ─── Step 11: Doctor tries to book (should fail with 403) ──────────────────
-  console.log('\n📋 STEP 11: Doctor tries to book (should fail 403)');
+  console.log1('\n📋 STEP 11: Doctor tries to book (should fail 403)');
   const wrongRoleRes = await request(
     'POST',
     '/appointment',
     {
       doctorId: doctorProfileId,
-      date: '2026-12-20',
+      date: new Date().toLocaleDateString('en-CA'),
       startTime: '11:00',
       endTime: '11:15',
     },
     doctorToken,
   );
-  log('Doctor booking (wrong role)', wrongRoleRes.status, wrongRoleRes.data);
+  log1('Doctor booking (wrong role)', wrongRoleRes.status, wrongRoleRes.data);
 
   // ─── Step 12: Non-existent doctor (should fail with 404) ──────────────────
-  console.log('\n📋 STEP 12: Book with invalid doctorId (should fail 404)');
+  console.log1('\n📋 STEP 12: Book with invalid doctorId (should fail 404)');
   const noDoctorRes = await request(
     'POST',
     '/appointment',
     {
       doctorId: 99999,
-      date: '2026-12-20',
+      date: new Date().toLocaleDateString('en-CA'),
       startTime: '10:00',
       endTime: '10:15',
     },
     patientToken,
   );
-  log('Invalid doctorId booking', noDoctorRes.status, noDoctorRes.data);
+  log1('Invalid doctorId booking', noDoctorRes.status, noDoctorRes.data);
 
   // ─── Step 13: Patient views their appointments ──────────────────────────────
-  console.log('\n📋 STEP 13: Patient views their appointments');
+  console.log1('\n📋 STEP 13: Patient views their appointments');
   const myAppts = await request('GET', '/appointment/my', null, patientToken);
-  log('GET /appointment/my', myAppts.status, myAppts.data);
+  log1('GET /appointment/my', myAppts.status, myAppts.data);
 
   // ─── Step 14: Doctor views their appointments ───────────────────────────────
-  console.log('\n📋 STEP 14: Doctor views their appointments');
+  console.log1('\n📋 STEP 14: Doctor views their appointments');
   const doctorAppts = await request('GET', '/doctor/appointments', null, doctorToken);
-  log('GET /doctor/appointments', doctorAppts.status, doctorAppts.data);
+  log1('GET /doctor/appointments', doctorAppts.status, doctorAppts.data);
 
   // ─── Step 15: Cancel appointment ────────────────────────────────────────────
   if (appointmentId) {
-    console.log('\n📋 STEP 15: Cancel appointment (should succeed)');
+    console.log1('\n📋 STEP 15: Cancel appointment (should succeed)');
     const cancelRes = await request(
       'PATCH',
       `/appointment/${appointmentId}/cancel`,
       null,
       patientToken,
     );
-    log(`PATCH /appointment/${appointmentId}/cancel`, cancelRes.status, cancelRes.data);
+    log1(`PATCH /appointment/${appointmentId}/cancel`, cancelRes.status, cancelRes.data);
 
     // ─── Step 16: Cancel already cancelled (should fail 400) ──────────────────
-    console.log('\n📋 STEP 16: Cancel again (should fail 400)');
+    console.log1('\n📋 STEP 16: Cancel again (should fail 400)');
     const cancelAgainRes = await request(
       'PATCH',
       `/appointment/${appointmentId}/cancel`,
       null,
       patientToken,
     );
-    log('Cancel already cancelled', cancelAgainRes.status, cancelAgainRes.data);
+    log1('Cancel already cancelled', cancelAgainRes.status, cancelAgainRes.data);
   }
 
   // ─── Step 17: Invalid appointment ID ────────────────────────────────────────
-  console.log('\n📋 STEP 17: Cancel invalid appointment ID (should fail 404)');
+  console.log1('\n📋 STEP 17: Cancel invalid appointment ID (should fail 404)');
   const invalidIdRes = await request(
     'PATCH',
     '/appointment/99999/cancel',
     null,
     patientToken,
   );
-  log('Cancel invalid ID', invalidIdRes.status, invalidIdRes.data);
+  log1('Cancel invalid ID', invalidIdRes.status, invalidIdRes.data);
 
   // ─── Step 18: Patient tries to access doctor route (should fail 403) ───────
-  console.log('\n📋 STEP 18: Patient accesses doctor route (should fail 403)');
+  console.log1('\n📋 STEP 18: Patient accesses doctor route (should fail 403)');
   const wrongRouteRes = await request('GET', '/doctor/appointments', null, patientToken);
-  log('Patient on doctor route', wrongRouteRes.status, wrongRouteRes.data);
+  log1('Patient on doctor route', wrongRouteRes.status, wrongRouteRes.data);
 
-  console.log('\n' + '='.repeat(60));
-  console.log('  All tests completed!');
-  console.log('='.repeat(60));
+  console.log1('\n' + '='.repeat(60));
+  console.log1('  All tests completed!');
+  console.log1('='.repeat(60));
 }
 
 runTests().catch(console.error);
- * test-api.js — Manual Test Script for Schedula Slot Generation System
- *
- * Run with:  node test-api.js
- *
+/**
+ * test - api.js — Manual Test Script for Schedula Slot Generation System
+  *
+ * Run with:  node test - api.js
+  *
  * Tests:
- *   1. Auth  — signup & login as doctor + patient
- *   2. Doctor Profile  — create profile
- *   3. Recurring Availability  — set weekly schedule
- *   4. Custom Override  — override a specific date
- *   5. Slot Fetching  — get available slots
- *   6. Booked Slot Filtering  — slots disappear after booking
- *   7. Edge Cases  — invalid date, past date, no availability, doctor not found
- */
+ * 1. Auth  — signup & login as doctor + patient
+  * 2. Doctor Profile  — create profile
+    * 3. Recurring Availability  — set weekly schedule
+      * 4. Custom Override  — override a specific date
+        * 5. Slot Fetching  — get available slots
+          * 6. Booked Slot Filtering  — slots disappear after booking
+            * 7. Edge Cases  — invalid date, past date, no availability, doctor not found
+              */
 
 const BASE = 'http://localhost:3000';
 
@@ -315,7 +316,7 @@ function getDateNDaysFromNow(n) {
 
 // Day-of-week name for a date N days from now (for recurring setup)
 function dayOfWeekFor(n) {
-  const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const d = new Date();
   d.setDate(d.getDate() + n);
   return days[d.getDay()];
@@ -331,9 +332,9 @@ async function main() {
   logSection('1. AUTH — Signup & Login');
   // ────────────────────────────────────────────────────────────────
 
-  const doctorEmail  = `doctor_${Date.now()}@test.com`;
+  const doctorEmail = `doctor_${Date.now()}@test.com`;
   const patientEmail = `patient_${Date.now()}@test.com`;
-  const password     = 'Test@1234';
+  const password = 'Test@1234';
 
   // Sign up doctor
   log('Signup Doctor', await req('POST', '/auth/signup', {
@@ -360,13 +361,13 @@ async function main() {
   // ────────────────────────────────────────────────────────────────
 
   res = log('Create Doctor Profile (slotDuration=15 min)', await req('POST', '/doctor/profile', {
-    fullName        : 'Dr. Test Kumar',
-    specialization  : 'Cardiologist',
-    experience      : 5,
-    qualification   : 'MBBS, MD',
-    consultationFee : 500,
+    fullName: 'Dr. Test Kumar',
+    specialization: 'Cardiologist',
+    experience: 5,
+    qualification: 'MBBS, MD',
+    consultationFee: 500,
     availabilityHours: '10:00 AM - 5:00 PM',
-    slotDuration    : 15,
+    slotDuration: 15,
   }, doctorToken));
 
   const doctorId = res.data?.profile?.id;
@@ -384,7 +385,7 @@ async function main() {
   log(`Set Recurring: ${tomorrowDay} 10:00-11:00`, await req('POST', '/doctor/availability', {
     dayOfWeek: tomorrowDay,
     startTime: '10:00',
-    endTime  : '11:00',
+    endTime: '11:00',
   }, doctorToken));
 
   // ────────────────────────────────────────────────────────────────
@@ -405,9 +406,9 @@ async function main() {
   console.log(`\n   Creating custom availability override for ${ovDate} (14:00-15:00)`);
 
   log(`POST /doctor/availability/override  [date=${ovDate}]`, await req('POST', '/doctor/availability/override', {
-    date     : ovDate,
+    date: ovDate,
     startTime: '14:00',
-    endTime  : '15:00',
+    endTime: '15:00',
     isAvailable: true,
   }, doctorToken));
 
@@ -419,18 +420,18 @@ async function main() {
   // ────────────────────────────────────────────────────────────────
 
   const blockedDate = getDateNDaysFromNow(3);
-  const blockedDay  = dayOfWeekFor(3);
+  const blockedDay = dayOfWeekFor(3);
 
   // First, add recurring for that day
   log(`Set Recurring for ${blockedDay}`, await req('POST', '/doctor/availability', {
     dayOfWeek: blockedDay,
     startTime: '10:00',
-    endTime  : '11:00',
+    endTime: '11:00',
   }, doctorToken));
 
   // Block with custom override
   log(`Override ${blockedDate} as unavailable`, await req('POST', '/doctor/availability/override', {
-    date       : blockedDate,
+    date: blockedDate,
     isAvailable: false,
   }, doctorToken));
 
@@ -474,13 +475,13 @@ async function main() {
   const doctor2Token = res.data?.access_token;
 
   res = log('Create Doctor2 Profile (slotDuration=30 min)', await req('POST', '/doctor/profile', {
-    fullName        : 'Dr. Thirty Min',
-    specialization  : 'Dermatologist',
-    experience      : 3,
-    qualification   : 'MBBS',
-    consultationFee : 300,
+    fullName: 'Dr. Thirty Min',
+    specialization: 'Dermatologist',
+    experience: 3,
+    qualification: 'MBBS',
+    consultationFee: 300,
     availabilityHours: '09:00 AM - 12:00 PM',
-    slotDuration    : 30,
+    slotDuration: 30,
   }, doctor2Token));
 
   const doctor2Id = res.data?.profile?.id;
@@ -490,7 +491,7 @@ async function main() {
     log(`Doctor2 Recurring: ${tomorrowDay} 09:00-11:00`, await req('POST', '/doctor/availability', {
       dayOfWeek: tomorrowDay,
       startTime: '09:00',
-      endTime  : '11:00',
+      endTime: '11:00',
     }, doctor2Token));
 
     log(`Doctor2 slots (30 min each) for ${tomorrow}`,
