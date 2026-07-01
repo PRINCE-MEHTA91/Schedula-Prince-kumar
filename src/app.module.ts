@@ -42,7 +42,6 @@ import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
       },
       extra: {
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
         keepAlive: true,
       },
       entities: [

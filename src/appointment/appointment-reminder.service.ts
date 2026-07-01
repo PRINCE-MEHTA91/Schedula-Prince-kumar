@@ -28,31 +28,47 @@ export class AppointmentReminderService {
       String(today.getDate()).padStart(2, '0'),
     ].join('-');
 
-    try {
-      const upcomingAppointments = await this.appointmentRepo.find({
-        where: {
-          date: dateString,
-          status: AppointmentStatus.CONFIRMED,
-          isReminderSent: false,
-        },
-        relations: { doctor: true, patient: true },
-      });
+    const maxRetries = 3;
+    let attempt = 0;
+    
+    while (attempt < maxRetries) {
+      try {
+        const upcomingAppointments = await this.appointmentRepo.find({
+          where: {
+            date: dateString,
+            status: AppointmentStatus.CONFIRMED,
+            isReminderSent: false,
+          },
+          relations: { doctor: true, patient: true },
+        });
 
-      if (upcomingAppointments.length === 0) {
-        return;
-      }
+        if (upcomingAppointments.length === 0) {
+          return;
+        }
 
-      this.logger.log(`Found ${upcomingAppointments.length} upcoming appointments to remind.`);
+        this.logger.log(`Found ${upcomingAppointments.length} upcoming appointments to remind.`);
 
-      for (const appt of upcomingAppointments) {
-        try {
-          await this.sendReminder(appt);
-        } catch (err) {
-          this.logger.error(`Failed to send reminder for appointment ${appt.id}`, err);
+        for (const appt of upcomingAppointments) {
+          try {
+            await this.sendReminder(appt);
+          } catch (err) {
+            this.logger.error(`Failed to send reminder for appointment ${appt.id}`, err);
+          }
+        }
+        
+        // Success, exit retry loop
+        break;
+      } catch (err) {
+        attempt++;
+        this.logger.error(`Error fetching appointments for reminder cron (Attempt ${attempt}/${maxRetries}):`, err.message);
+        
+        if (attempt >= maxRetries) {
+          this.logger.error('Max retries reached. Cron job failed.');
+        } else {
+          // Wait before retrying (exponential backoff: 2s, 4s, 8s)
+          await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
         }
       }
-    } catch (err) {
-      this.logger.error('Error fetching appointments for reminder cron:', err);
     }
   }
 
