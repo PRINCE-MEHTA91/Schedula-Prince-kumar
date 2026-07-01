@@ -5,6 +5,7 @@ import {
   IsPositive,
   IsOptional,
   IsInt,
+  IsBoolean,
   Min,
   Max,
   IsIn,
@@ -64,4 +65,14 @@ export class CreateDoctorProfileDto {
   @IsInt()
   @Min(1)
   maxPatientsPerWave?: number;
+
+  // ── Day 20: Future Booking Configuration ──────────────────────────────────
+  @IsOptional()
+  @IsBoolean()
+  allowFutureBooking?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxFutureBookingDays?: number;
 }

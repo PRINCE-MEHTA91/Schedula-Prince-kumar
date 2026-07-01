@@ -12,7 +12,7 @@ import { PatientProfile } from '../../patient/entities/patient-profile.entity';
 
 // Matches the actual DB enum: appointments_status_enum
 export enum AppointmentStatus {
-  BOOKED = 'CONFIRMED',
+  BOOKED = 'BOOKED',
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
@@ -72,6 +72,10 @@ export class Appointment {
   // Token number assigned to the patient (only for WAVE scheduling)
   @Column({ type: 'int', nullable: true })
   tokenNumber: number | null;
+
+  // Day 17: Track whether the appointment reminder has been sent
+  @Column({ default: false })
+  isReminderSent: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

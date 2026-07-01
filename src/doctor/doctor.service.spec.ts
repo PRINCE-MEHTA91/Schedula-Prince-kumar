@@ -37,6 +37,11 @@ function makeDoctor(overrides: Partial<DoctorProfile> = {}): DoctorProfile {
     availabilityHours: '9am - 5pm',
     isAvailable: true,
     slotDuration: 15,
+    schedulingType: 'STREAM',
+    bufferTime: 0,
+    maxPatientsPerWave: 0,
+    allowFutureBooking: false,
+    maxFutureBookingDays: null,
     profileDetails: 'Heart diseases specialist',
     userId: 1,
     recurringAvailabilities: [],
@@ -44,8 +49,6 @@ function makeDoctor(overrides: Partial<DoctorProfile> = {}): DoctorProfile {
     createdAt: new Date(),
     updatedAt: new Date(),
     user: null as any,
-    recurringAvailabilities: [],
-    customAvailabilities: [],
     ...overrides,
   };
 }

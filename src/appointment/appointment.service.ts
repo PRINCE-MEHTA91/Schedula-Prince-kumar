@@ -61,7 +61,7 @@ export class AppointmentService {
 
     @InjectRepository(CustomAvailability)
     private readonly customAvailRepo: Repository<CustomAvailability>,
-  ) {}
+  ) { }
 
   // ─── 1. Book Appointment (PATIENT only) ──────────────────────────────────────
 
@@ -84,13 +84,15 @@ export class AppointmentService {
       );
     }
 
-    // Step 3: Check appointment is for a future date and time
-    // Combine date + startTime to compare with current time
+    // Step 3: Validate booking date against doctor's future-booking policy (Day 20)
+    this.validateBookingDate(doctor, dto.date);
+
+    // Step 3b: Ensure the specific slot time is still in the future
     const appointmentDateTime = new Date(`${dto.date}T${dto.startTime}:00`);
     const now = new Date();
     if (appointmentDateTime <= now) {
       throw new BadRequestException(
-        'Appointment must be scheduled for a future date and time.',
+        'The requested time slot has already passed. Please choose a later time.',
       );
     }
 
@@ -103,6 +105,35 @@ export class AppointmentService {
     }
 
     const { startDay, endDay, startMin, endMin } = parsedAvail;
+
+    // Step 4b: Day 19 - Time-Based Booking Window
+    // Booking window opens 2 hours before doctor's start time and closes 1 hour before doctor's end time.
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const bookingOpenMin = startMin - 120;
+    const bookingCloseMin = endMin - 60;
+
+    const formatTime = (minutes: number) => {
+      // Handle negative wrap around just in case
+      let m = minutes;
+      if (m < 0) m += 24 * 60;
+      const h = Math.floor(m / 60);
+      const mins = m % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${h12.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')} ${ampm}`;
+    };
+
+    if (nowMin < bookingOpenMin) {
+      throw new BadRequestException(
+        `Booking window has not opened yet. It opens at ${formatTime(bookingOpenMin)}.`,
+      );
+    }
+    if (nowMin >= bookingCloseMin) {
+      throw new BadRequestException(
+        `Booking window has closed. It closed at ${formatTime(bookingCloseMin)}.`,
+      );
+    }
+
     const requestDay = appointmentDateTime.getDay(); // 0 for Sunday, 1 for Monday
 
     if (!this.isDayInRange(requestDay, startDay, endDay)) {
@@ -144,7 +175,7 @@ export class AppointmentService {
           suggestedSlots: nextAvailable.slots
         });
       }
-      
+
       tokenNumber = waveAppointments.length + 1;
     } else {
       // Step 5: Check this exact slot is not already booked (same doctor + date + startTime)
@@ -272,7 +303,7 @@ export class AppointmentService {
     if (oldAppointmentDateTime <= now) {
       throw new BadRequestException('Cannot reschedule a past appointment.');
     }
-    
+
     if (diffInMinutes < 30) {
       throw new BadRequestException('Cannot reschedule appointment less than 30 minutes before start time.');
     }
@@ -361,7 +392,7 @@ export class AppointmentService {
           suggestedSlots: nextAvailable.slots
         });
       }
-      
+
       tokenNumber = null;
     }
 
@@ -434,7 +465,7 @@ export class AppointmentService {
     if (appointmentDateTime <= now) {
       throw new BadRequestException('Cannot cancel a past appointment.');
     }
-    
+
     if (diffInMinutes < 30) {
       throw new BadRequestException('Cannot cancel appointment less than 30 minutes before start time.');
     }
@@ -477,7 +508,7 @@ export class AppointmentService {
     const whereClause: any = {
       doctorId: doctor.id,
     };
-    
+
     // Support filtering by date
     if (dateFilter) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFilter)) {
@@ -565,7 +596,7 @@ export class AppointmentService {
     const cancelledDateLabel = new Date(
       `${appointment.date}T00:00:00`,
     ).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
-    
+
     await this.notificationService.createNotification({
       patientId: appointment.patient.id,
       type: NotificationType.APPOINTMENT_CANCELLED,
@@ -641,7 +672,7 @@ export class AppointmentService {
     if (doctor.schedulingType === 'WAVE') {
       const maxCapacity = doctor.maxPatientsPerWave || 5;
       const bookedCount = bookedAppointments.length;
-      
+
       const slotStartHour = String(Math.floor(startMin / 60)).padStart(2, '0');
       const slotStartMin = String(startMin % 60).padStart(2, '0');
       const waveStartTime = `${slotStartHour}:${slotStartMin}`;
@@ -884,8 +915,8 @@ export class AppointmentService {
       // Determine the raw availability windows for this date
       const availWindows: { startTime: string; endTime: string }[] = hasCustomAvailableSlots
         ? customOverrides
-            .filter((c) => c.isAvailable && c.startTime && c.endTime)
-            .map((c) => ({ startTime: c.startTime as string, endTime: c.endTime as string }))
+          .filter((c) => c.isAvailable && c.startTime && c.endTime)
+          .map((c) => ({ startTime: c.startTime as string, endTime: c.endTime as string }))
         : recurringForDay.map((r) => ({ startTime: r.startTime, endTime: r.endTime }));
 
       // Compute all fixed-duration legacy slots across all windows
@@ -1136,6 +1167,72 @@ export class AppointmentService {
     }
 
     return slots;
+  }
+
+  /**
+   * Day 20 – Future Appointment Booking Configuration
+   *
+   * Validates requestedDate against the doctor's booking policy:
+   *  ─ Past dates                      → always rejected
+   *  ─ allowFutureBooking = false       → only today allowed
+   *  ─ allowFutureBooking = true        → today + up to maxFutureBookingDays
+   *                                        (defaults to 7 when null/0/negative)
+   *
+   * Timezone-safe: uses local wall-clock date to avoid UTC-offset drift.
+   */
+  private validateBookingDate(doctor: DoctorProfile, requestedDate: string): void {
+    // ── Validate date format ────────────────────────────────────────────────
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD.');
+    }
+
+    // ── Build today string in local time (no UTC shift) ──────────────────────
+    const now = new Date();
+    const todayStr = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    // ── Always reject past dates ────────────────────────────────────────────
+    if (requestedDate < todayStr) {
+      throw new BadRequestException(
+        `Booking for past dates is not allowed. Today is ${todayStr}.`,
+      );
+    }
+
+    // ── Today is always allowed ─────────────────────────────────────────────
+    if (requestedDate === todayStr) return;
+
+    // ── Future date — check doctor's allowFutureBooking policy ──────────────
+    if (!doctor.allowFutureBooking) {
+      throw new BadRequestException(
+        `This doctor only accepts same-day appointments. ` +
+        `Bookings are only allowed for today (${todayStr}).`,
+      );
+    }
+
+    // ── Enforce maxFutureBookingDays window ──────────────────────────────
+    const DEFAULT_MAX_FUTURE_DAYS = 7;
+    const maxDays =
+      doctor.maxFutureBookingDays != null && doctor.maxFutureBookingDays > 0
+        ? doctor.maxFutureBookingDays
+        : DEFAULT_MAX_FUTURE_DAYS;
+
+    const maxDate = new Date(now);
+    maxDate.setDate(now.getDate() + maxDays);
+    const maxDateStr = [
+      maxDate.getFullYear(),
+      String(maxDate.getMonth() + 1).padStart(2, '0'),
+      String(maxDate.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (requestedDate > maxDateStr) {
+      throw new BadRequestException(
+        `Booking is only allowed up to ${maxDays} day(s) in advance. ` +
+        `The last bookable date is ${maxDateStr}. You requested: ${requestedDate}.`,
+      );
+    }
   }
 
   private parseAvailability(availabilityStr: string) {

@@ -8,6 +8,7 @@ import { WaveSchedule } from './entities/wave-schedule.entity';
 import { RecurringAvailability } from '../doctor/entities/recurring-availability.entity';
 import { CustomAvailability } from '../doctor/entities/custom-availability.entity';
 import { AppointmentService } from './appointment.service';
+import { AppointmentReminderService } from './appointment-reminder.service';
 import { AppointmentController } from './appointment.controller';
 import { NotificationModule } from '../notification/notification.module';
 
@@ -26,7 +27,7 @@ import { NotificationModule } from '../notification/notification.module';
     NotificationModule,
   ],
   controllers: [AppointmentController],
-  providers: [AppointmentService],
+  providers: [AppointmentService, AppointmentReminderService],
   exports: [AppointmentService],
 })
 export class AppointmentModule {}

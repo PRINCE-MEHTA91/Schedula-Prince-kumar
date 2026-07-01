@@ -1,62 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationService } from './notification.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Notification, NotificationType } from './entities/notification.entity';
-import { PatientProfile } from '../patient/entities/patient-profile.entity';
-import { NotFoundException } from '@nestjs/common';
-
-describe('NotificationService', () => {
-  let service: NotificationService;
-  let notificationRepo: any;
-  let patientRepo: any;
-
-  beforeEach(async () => {
-    const mockNotificationRepo = {
-      create: jest.fn().mockImplementation((dto) => dto),
-      save: jest.fn().mockImplementation((notification) => Promise.resolve({ id: 1, ...notification })),
-      find: jest.fn(),
-      findOne: jest.fn(),
-      count: jest.fn(),
-      update: jest.fn(),
-    };
-
-    const mockPatientRepo = {
-      findOne: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        NotificationService,
-        { provide: getRepositoryToken(Notification), useValue: mockNotificationRepo },
-        { provide: getRepositoryToken(PatientProfile), useValue: mockPatientRepo },
 /**
  * Unit Tests: NotificationService
  * Day 14 — Notification System Foundation
  *
  * Scenarios covered:
- *  getMyNotifications
- *    1.  Returns notifications list (newest-first)
- *    2.  Returns empty message when patient has no notifications
- *    3.  Throws NotFoundException when patient profile not found
- *
- *  markAsRead
- *    4.  Marks an unread notification as read
- *    5.  Returns early when notification already read
- *    6.  Throws NotFoundException for unknown notification ID
- *    7.  Throws ForbiddenException for another patient's notification
- *    8.  Throws NotFoundException when patient profile not found
- *
- *  markAllAsRead
- *    9.  Updates all unread notifications and returns affected count
- *    10. Returns "no unread" message when nothing to update
- *    11. Throws NotFoundException when patient profile not found
- *
- *  getUnreadCount
- *    12. Returns correct unread count
- *    13. Returns 0 when all notifications are read
- *    14. Throws NotFoundException when patient profile not found
+ *  getMyNotifications     1-3
+ *  markAsRead             4-8
+ *  markAllAsRead          9-11
+ *  getUnreadCount         12-14
  */
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -72,6 +23,7 @@ const mockNotificationRepo = () => ({
   count: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+  update: jest.fn(),
   createQueryBuilder: jest.fn(),
 });
 
@@ -91,7 +43,7 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
     type: NotificationType.APPOINTMENT_BOOKED,
     isRead: false,
     createdAt: new Date(),
-    patient: null as any,
+    updatedAt: new Date(),
     ...overrides,
   };
 }
@@ -111,131 +63,18 @@ describe('NotificationService', () => {
       ],
     }).compile();
 
-    service = module.get<NotificationService>(NotificationService);
-    notificationRepo = module.get(getRepositoryToken(Notification));
-    patientRepo = module.get(getRepositoryToken(PatientProfile));
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('getMyNotifications', () => {
-    it('should fetch notifications for a patient successfully', async () => {
-      const userId = 1;
-      const patientId = 2;
-      const mockNotifications = [
-        { id: 1, patientId, isRead: false },
-        { id: 2, patientId, isRead: true },
-      ];
-
-      patientRepo.findOne.mockResolvedValue({ id: patientId, userId });
-      notificationRepo.find.mockResolvedValue(mockNotifications);
-
-      const result = await service.getMyNotifications(userId);
-
-      expect(result.message).toBe('Notifications fetched successfully');
-      expect(result.count).toBe(2);
-      expect(result.notifications).toEqual(mockNotifications);
-      expect(notificationRepo.find).toHaveBeenCalledWith({
-        where: { patientId },
-        order: { createdAt: 'DESC' },
-      });
-    });
-
-    it('should throw NotFoundException if patient profile is not found', async () => {
-      const userId = 1;
-      patientRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.getMyNotifications(userId)).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('getUnreadCount', () => {
-    it('should return unread count successfully', async () => {
-      const userId = 1;
-      const patientId = 2;
-
-      patientRepo.findOne.mockResolvedValue({ id: patientId, userId });
-      notificationRepo.count.mockResolvedValue(5);
-
-      const result = await service.getUnreadCount(userId);
-
-      expect(result.unreadCount).toBe(5);
-      expect(notificationRepo.count).toHaveBeenCalledWith({
-        where: { patientId, isRead: false },
-      });
-    });
-
-    it('should return 0 if patient profile is not found', async () => {
-      const userId = 1;
-      patientRepo.findOne.mockResolvedValue(null);
-
-      const result = await service.getUnreadCount(userId);
-
-      expect(result.unreadCount).toBe(0);
-    });
-  });
-
-  describe('markAsRead', () => {
-    it('should mark a specific notification as read successfully', async () => {
-      const userId = 1;
-      const patientId = 2;
-      const notificationId = 1;
-      const mockNotification = { id: notificationId, patientId, isRead: false };
-
-      patientRepo.findOne.mockResolvedValue({ id: patientId, userId });
-      notificationRepo.findOne.mockResolvedValue(mockNotification);
-
-      const result = await service.markAsRead(notificationId, userId);
-
-      expect(result.message).toBe('Notification marked as read');
-      expect(mockNotification.isRead).toBe(true);
-      expect(notificationRepo.save).toHaveBeenCalledWith(mockNotification);
-    });
-
-    it('should throw NotFoundException if notification is not found or unauthorized', async () => {
-      const userId = 1;
-      const patientId = 2;
-      const notificationId = 1;
-
-      patientRepo.findOne.mockResolvedValue({ id: patientId, userId });
-      notificationRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.markAsRead(notificationId, userId)).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('markAllAsRead', () => {
-    it('should mark all unread notifications as read successfully', async () => {
-      const userId = 1;
-      const patientId = 2;
-
-      patientRepo.findOne.mockResolvedValue({ id: patientId, userId });
-      notificationRepo.update.mockResolvedValue({ affected: 2 });
-
-      const result = await service.markAllAsRead(userId);
-
-      expect(result.message).toBe('All notifications marked as read');
-      expect(notificationRepo.update).toHaveBeenCalledWith(
-        { patientId, isRead: false },
-        { isRead: true },
-      );
-    });
-
-    it('should throw NotFoundException if patient profile is not found', async () => {
-      const userId = 1;
-      patientRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.markAllAsRead(userId)).rejects.toThrow(NotFoundException);
-    notifRepo = module.get(getRepositoryToken(Notification));
+    service    = module.get<NotificationService>(NotificationService);
+    notifRepo  = module.get(getRepositoryToken(Notification));
     patientRepo = module.get(getRepositoryToken(PatientProfile));
   });
 
   afterEach(() => jest.clearAllMocks());
 
-  // ─── getMyNotifications ────────────────────────────────────────────────────
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
 
+  // ─── getMyNotifications ────────────────────────────────────────────────────
   describe('getMyNotifications', () => {
     it('Scenario 1 — returns notifications ordered newest-first', async () => {
       const notifications = [
@@ -268,13 +107,11 @@ describe('NotificationService', () => {
 
     it('Scenario 3 — throws NotFoundException when patient profile not found', async () => {
       patientRepo.findOne.mockResolvedValue(null);
-
       await expect(service.getMyNotifications(99)).rejects.toThrow(NotFoundException);
     });
   });
 
   // ─── markAsRead ───────────────────────────────────────────────────────────
-
   describe('markAsRead', () => {
     it('Scenario 4 — marks unread notification as read', async () => {
       const notif = makeNotification({ isRead: false });
@@ -304,36 +141,30 @@ describe('NotificationService', () => {
     it('Scenario 6 — throws NotFoundException for unknown notification ID', async () => {
       patientRepo.findOne.mockResolvedValue(patient);
       notifRepo.findOne.mockResolvedValue(null);
-
       await expect(service.markAsRead(9999, 99)).rejects.toThrow(NotFoundException);
     });
 
-    it('Scenario 7 — throws ForbiddenException for another patient\'s notification', async () => {
+    it("Scenario 7 — throws ForbiddenException for another patient's notification", async () => {
       patientRepo.findOne.mockResolvedValue(patient);
-      // Notification belongs to patient 20, not 10
       notifRepo.findOne.mockResolvedValue(makeNotification({ patientId: 20 }));
-
       await expect(service.markAsRead(1, 99)).rejects.toThrow(ForbiddenException);
     });
 
     it('Scenario 8 — throws NotFoundException when patient profile not found', async () => {
       patientRepo.findOne.mockResolvedValue(null);
-
       await expect(service.markAsRead(1, 99)).rejects.toThrow(NotFoundException);
     });
   });
 
   // ─── markAllAsRead ────────────────────────────────────────────────────────
-
   describe('markAllAsRead', () => {
     it('Scenario 9 — updates all unread and returns affected count', async () => {
       patientRepo.findOne.mockResolvedValue(patient);
 
-      // Mock createQueryBuilder chain
       const executeMock = jest.fn().mockResolvedValue({ affected: 3 });
-      const whereMock = jest.fn().mockReturnValue({ execute: executeMock });
-      const setMock = jest.fn().mockReturnValue({ where: whereMock });
-      const updateMock = jest.fn().mockReturnValue({ set: setMock });
+      const whereMock   = jest.fn().mockReturnValue({ execute: executeMock });
+      const setMock     = jest.fn().mockReturnValue({ where: whereMock });
+      const updateMock  = jest.fn().mockReturnValue({ set: setMock });
       notifRepo.createQueryBuilder.mockReturnValue({ update: updateMock });
 
       const result = await service.markAllAsRead(99);
@@ -346,9 +177,9 @@ describe('NotificationService', () => {
       patientRepo.findOne.mockResolvedValue(patient);
 
       const executeMock = jest.fn().mockResolvedValue({ affected: 0 });
-      const whereMock = jest.fn().mockReturnValue({ execute: executeMock });
-      const setMock = jest.fn().mockReturnValue({ where: whereMock });
-      const updateMock = jest.fn().mockReturnValue({ set: setMock });
+      const whereMock   = jest.fn().mockReturnValue({ execute: executeMock });
+      const setMock     = jest.fn().mockReturnValue({ where: whereMock });
+      const updateMock  = jest.fn().mockReturnValue({ set: setMock });
       notifRepo.createQueryBuilder.mockReturnValue({ update: updateMock });
 
       const result = await service.markAllAsRead(99);
@@ -359,13 +190,11 @@ describe('NotificationService', () => {
 
     it('Scenario 11 — throws NotFoundException when patient profile not found', async () => {
       patientRepo.findOne.mockResolvedValue(null);
-
       await expect(service.markAllAsRead(99)).rejects.toThrow(NotFoundException);
     });
   });
 
   // ─── getUnreadCount ───────────────────────────────────────────────────────
-
   describe('getUnreadCount', () => {
     it('Scenario 12 — returns correct unread count', async () => {
       patientRepo.findOne.mockResolvedValue(patient);
@@ -390,7 +219,6 @@ describe('NotificationService', () => {
 
     it('Scenario 14 — throws NotFoundException when patient profile not found', async () => {
       patientRepo.findOne.mockResolvedValue(null);
-
       await expect(service.getUnreadCount(99)).rejects.toThrow(NotFoundException);
     });
   });

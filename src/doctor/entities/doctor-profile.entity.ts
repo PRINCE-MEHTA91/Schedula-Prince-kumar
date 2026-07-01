@@ -54,6 +54,15 @@ export class DoctorProfile {
   @Column({ type: 'int', nullable: true })
   maxPatientsPerWave: number; // for WAVE scheduling
 
+  // ── Day 20: Future Booking Configuration ──────────────────────────────────
+  // false = same-day only (default); true = allow future dates
+  @Column({ default: false })
+  allowFutureBooking: boolean;
+
+  // Max days ahead patients can book. null/0 → falls back to 7-day default.
+  @Column({ type: 'int', nullable: true })
+  maxFutureBookingDays: number | null;
+
   @OneToOne(() => User, { eager: false })
   @JoinColumn({ name: 'userId' })
   user: User;
