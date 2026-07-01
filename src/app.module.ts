@@ -40,6 +40,11 @@ import { WaveSchedule } from './appointment/entities/wave-schedule.entity';
       ssl: {
         rejectUnauthorized: false,
       },
+      extra: {
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+        keepAlive: true,
+      },
       entities: [
         User,
         DoctorProfile,
